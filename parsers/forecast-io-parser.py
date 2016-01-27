@@ -19,9 +19,6 @@ class ForecastIO(RMParser):
     parserDebug = False
 
     params = {"appKey": None, "useProxy": False}
-    #params = {"appKey": "922309bbf729baba82616dca01572d3057eead89", "useProxy": True}
-    #"appKey" : "443249a951b1708d8feb19888cfd8315939974f0" # invalid proxy app key
-    #"appKey" : "d1deb05ce0bf3858054236e0171077e5" # personal demo key
 
     def isEnabledForLocation(self, timezone, lat, long):
         if ForecastIO.parserEnabled:
@@ -32,20 +29,17 @@ class ForecastIO(RMParser):
     def perform(self):
         s = self.settings
 
-        # Direct Forecast.io
-        #URL = "https://api.forecast.io/forecast/d1deb05ce0bf3858054236e0171077e5/" + \
-        #        `s.location.latitude` + "," + `s.location.longitude`
-
         appKey = self.params.get("appKey", None)
         if appKey is None:
+            self.lastKnownError = "Error: No Api Key"
             return
 
         if self.params["useProxy"]:
             # RainMachine Forecast.io proxy
-            URL = s.doyDownloadUrl + "/api/forecast_io/forecast/" + appKey + "/" + \
+            URL = s.doyDownloadUrl + "/api/forecast_io/forecast/" + str(appKey) + "/" + \
                     str(s.location.latitude) + "," + str(s.location.longitude)
         else:
-            URL = "https://api.forecast.io/forecast/" + appKey + "/" + \
+            URL = "https://api.forecast.io/forecast/" + str(appKey) + "/" + \
                     str(s.location.latitude) + "," + str(s.location.longitude)
 
         URLParams = \
@@ -72,11 +66,13 @@ class ForecastIO(RMParser):
             except Exception, e:
                 log.error("*** No hourly information found in response!")
                 log.exception(e)
+                self.lastKnownError = "Warning: No hourly information"
 
             try:
                 daily = forecast["daily"]["data"]
             except Exception, e:
                 log.error("*** No daily information found in response!")
+                self.lastKnownError = "Warning: No daily information"
                 log.exception(e)
 
             for entry in hourly:

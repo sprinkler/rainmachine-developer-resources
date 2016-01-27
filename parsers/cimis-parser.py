@@ -19,7 +19,6 @@ class CIMIS(RMParser):
     parserEnabled = False
     parserDebug = True
     params = {"customStation": True, "station": 2, "historicDays": 5, "appKey": None}
-    #params = {"customStation": True, "station": 2, "historicDays": 5, "appKey": "523cf689-7ba6-47bd-a2be-6dc1c1ba9afb"}
 
     maxAllowedDays = 80 # the maximum number of days CIMIS allows to retrieve in 1 call
 
@@ -49,6 +48,7 @@ class CIMIS(RMParser):
                 self.__retrieveData(endDay, startDay) # we call with startDay/endDay swapped because CIMIS expects historic intervals
             except Exception, e:
                 log.error("*** Error running cimis parser")
+                self.lastKnownError = "Error: Data retrieval failed"
                 log.exception(e)
 
         log.debug("Finished running cimis parser")
@@ -113,6 +113,7 @@ class CIMIS(RMParser):
             except Exception, e:
                 log.error("*** No daily information found in response!")
                 log.exception(e)
+                self.lastKnownError('Warning: No daily information')
 
             for entry in daily:
                 timestamp = entry.get("Date")
@@ -130,7 +131,6 @@ class CIMIS(RMParser):
                 self.addValue(RMParser.dataType.TEMPERATURE, timestamp, self.__toFloat(avgTemp))
                 self.addValue(RMParser.dataType.MINTEMP, timestamp, self.__toFloat(minTemp))
                 self.addValue(RMParser.dataType.MAXTEMP, timestamp, self.__toFloat(maxTemp))
-                self.addValue(RMParser.dataType.QPF, timestamp, self.__toFloat(entry.get("DayPrecip")["Value"]))
                 self.addValue(RMParser.dataType.RH, timestamp, self.__toFloat(entry.get("DayRelHumAvg")["Value"]))
                 self.addValue(RMParser.dataType.MINRH, timestamp, self.__toFloat(entry.get("DayRelHumMin")["Value"]))
                 self.addValue(RMParser.dataType.MAXRH, timestamp, self.__toFloat(entry.get("DayRelHumMax")["Value"]))

@@ -9,6 +9,7 @@ from RMUtilsFramework.rmLogging import log
 from RMDataFramework.rmWeatherData import RMWeatherConditions
 from RMDataFramework.rmUserSettings import globalSettings
 from RMUtilsFramework.rmTimeUtils import *
+from RMUtilsFramework.rmUtils import convertKnotsToMS, convertFahrenheitToCelsius, convertInchesToMM
 
 import datetime, time
 from xml.etree import ElementTree as e
@@ -52,29 +53,29 @@ class NOAA(RMParser):
 
         if tree.getroot().tag == 'error':
             log.error("*** No hourly information found in response!")
-
+            self.lastKnownError = "Error: No hourly information found"
             tree.getroot().clear()
             del tree
             tree = None
         else:
             # We get them in English units need in Metric units
             maxt = self.__parseWeatherTag(tree, 'temperature', 'maximum')
-            maxt = self.convertFahrenheitToCelsius(maxt)
+            maxt = convertFahrenheitToCelsius(maxt)
 
             mint = self.__parseWeatherTag(tree, 'temperature', 'minimum', useStartTimes=False) # for mint we want the end-time to be saved in DB
-            mint = self.convertFahrenheitToCelsius(mint)
+            mint = convertFahrenheitToCelsius(mint)
 
             temp = self.__parseWeatherTag(tree, 'temperature', 'hourly')
-            temp = self.convertFahrenheitToCelsius(temp)
+            temp = convertFahrenheitToCelsius(temp)
 
             qpf = self.__parseWeatherTag(tree, 'precipitation', 'liquid')
-            qpf = self.convertInchesToMM(qpf)
+            qpf = convertInchesToMM(qpf)
 
             dew = self.__parseWeatherTag(tree, 'temperature', 'dew point')
-            dew = self.convertFahrenheitToCelsius(dew)
+            dew = convertFahrenheitToCelsius(dew)
 
             wind = self.__parseWeatherTag(tree, 'wind-speed', 'sustained')
-            wind = self.convertKnotsToMS(wind)
+            wind = convertKnotsToMS(wind)
 
             # These are as percentages
             pop = self.__parseWeatherTag(tree, 'probability-of-precipitation', '12 hour')
@@ -106,7 +107,7 @@ class NOAA(RMParser):
 
         if tree.getroot().tag == 'error':
             log.error("*** No daily information found in response!")
-
+            self.lastKnownError = "Error: No daily information found"
             tree.getroot().clear()
             del tree
             tree = None
@@ -197,58 +198,7 @@ class NOAA(RMParser):
         return result
 
 
-    #-----------------------------------------------------------------------------------------------------------------------
-    # Utility functions
-    #
 
-    # Can take a list of tuples (timestamp, value) or scalar as argument
-    def convertKnotsToMS(self, value):
-        if isinstance(value, list):
-            value = [(v[0], self.__knotsToMS(v[1])) for v in value]
-        else:
-            value = self.__knotsToMS(value)
-
-        return value
-
-    def convertFahrenheitToCelsius(self, value):
-        if isinstance(value, list):
-            value = [(v[0], self.__fahrenheitToCelsius(v[1])) for v in value]
-        else:
-            value = self.__fahrenheitToCelsius(value)
-
-        return value
-
-    def convertInchesToMM(self, value):
-        if isinstance(value, list):
-            value = [(v[0], self.__inchesToMM(v[1])) for v in value]
-        else:
-            value = self.__inchesToMM(value)
-
-        return value
-
-    def __knotsToMS(self, knots):
-        try:
-            knots = float(knots)
-            return knots * 0.514444
-        except:
-            log.debug("Can't convert knots to m/s !")
-            return None
-
-    def __fahrenheitToCelsius(self, temp):
-        try:
-            temp = float(temp)
-            return (temp - 32) * 5.0/9.0
-        except:
-            log.debug("Can't convert fahrenheit to celsius !")
-            return None
-
-    def __inchesToMM(self, inches):
-        try:
-            inches = float(inches)
-            return inches * 25.4
-        except:
-            log.debug("Can't convert inches to mm !")
-            return None
 
     def conditionConvert(self, conditionStr):
         if 'bkn' in conditionStr:

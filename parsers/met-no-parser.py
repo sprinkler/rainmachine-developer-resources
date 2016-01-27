@@ -2,15 +2,22 @@
 # All rights reserved.
 # Authors: Nicu Pavel <npavel@mini-box.com>
 #          Codrin Juravle <codrin.juravle@mini-box.com>
+#          Csenteri Barna <brown@mini-box.com>
 #          Virgil Dinu <virgil.dinu@coretech.ro>
 
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
 from RMDataFramework.rmWeatherData import RMWeatherConditions
 
-import datetime, time
+import datetime, time, os
 from xml.etree import ElementTree as e
 from datetime import timedelta
+
+from RMDataFramework.rmUserSettings import globalSettings
+
+
+class METNOParseAction:
+    Add, Replace, Skip = range(0, 3)
 
 
 class METNO(RMParser):
@@ -29,7 +36,8 @@ class METNO(RMParser):
         s = self.settings
         URL = "http://api.met.no/weatherapi/locationforecastlts/1.2/"
         URLParams = [("lat", s.location.latitude),
-                  ("lon", s.location.longitude)]
+                  ("lon", s.location.longitude),
+                  ("msl", int(round(s.location.elevation)))]
         #-----------------------------------------------------------------------------------------------
         #
         # Get hourly data.
@@ -42,6 +50,7 @@ class METNO(RMParser):
 
         if tree.getroot().tag == 'error':
             log.error("*** No hourly information found in response!")
+            self.lastKnownError = "Error: No hourly information found"
 
             tree.getroot().clear()
             del tree
@@ -78,6 +87,8 @@ class METNO(RMParser):
         values = []
         startTimes = []
         lastEndTime = None
+        lastPeriod = None
+        whattodo = METNOParseAction.Add
 
         for w in tree.getroot().find('product'):
             for wd in w.find('location'):
@@ -88,21 +99,23 @@ class METNO(RMParser):
                     ft = datetime.datetime.strptime(from_time, "%Y-%m-%dT%H:%M:%SZ")
                     tt = datetime.datetime.strptime(to_time, "%Y-%m-%dT%H:%M:%SZ")
                     td = tt - ft
+                    
+                    whattodo = METNOParseAction.Add
+                    #replace old value if the new one has the same end time and period is longer than old one, otherwise skip
+                    if lastEndTime is not None and lastEndTime == tt:
+                        if lastPeriod is not None and lastPeriod <= td:
+                            whattodo = METNOParseAction.Replace
+                        else:
+                            whattodo = METNOParseAction.Skip
 
-                    shouldSkip = False
-                    # skip 6h intervals as they aren't disjoint between them (eg: 0-6, 3-9)
-                    # only if we had a previous report with same end time
-                    if lastEndTime is not None and lastEndTime == tt and td.seconds == 6 * 3600:
-                        shouldSkip = True
-
-
-                    log.debug("Tag %s [%s - %s] Skip: %s" % (tag, from_time, to_time, shouldSkip))
-
-                    if shouldSkip:
+                    if whattodo == METNOParseAction.Skip:
                         continue
 
                     lastEndTime = tt
-                    startTimes.append(self.__parseDateTime(ft))
+                    lastPeriod = td
+                
+                    if whattodo == METNOParseAction.Add:
+                        startTimes.append(self.__parseDateTime(ft))
                     try:
                         if (tag == 'windDirection'):
                             val = wd.get('deg')
@@ -127,7 +140,11 @@ class METNO(RMParser):
                     except Exception, e:
                         val = None
                         log.debug(e)
-                    values.append(val)
+
+                    if whattodo == METNOParseAction.Add:
+                        values.append(val)
+                    else: # replace
+                        values[len(values)-1] = val
 
         result = zip(startTimes, values)
         return result
