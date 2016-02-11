@@ -1,0 +1,19 @@
+<html>
+<head>
+	<title> RainMachine REST API JavaScript Test </title>
+	<meta charset="utf-8" />
+	<link rel="icon" type="image/ico" href="http://rainmachine.com/favicon.ico">
+	<script src="js/async.js"></script>
+	<script src="js/rainmachine-api-v4.js"></script>
+</head>
+<body onload="testAPI()">
+	<script language="javascript">
+	    function testAPI() {
+			//asynchronous example
+			APIAsync.getApiVer().then(function(receivedData){ console.log("ASYNC CALL: %o", receivedData);});
+			//synchronous example
+			console.log("SYNC CALL: %o", APISync.getApiVer());
+	    }
+	</script>
+</body>
+</html>
