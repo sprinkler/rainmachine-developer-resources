@@ -2,7 +2,8 @@
 
 This is a implementation of RainMachine REST API in javascript. RainMachine REST API documentation is available here: http://docs.rainmachine.apiary.io/
 This implementation is used on https://github.com/sprinkler/rainmachine-web-ui.
-A simple example usage can be found on index.html.
+A simple example usage can be found on index.html, which uses apiary.io mock server. If you wish to run directly on a RainMachine device edit js/rainmachine-api-v4.js
+and modify host and port variables to point to your desired RainMachine (either local ip or remote access through my.rainmachine.com).
 
 #Available functions
 You can use the functions below by either synchronous method: APISync.getApiVer() or aynchronously: APIAsync.getApiVer().then()
