@@ -68,7 +68,7 @@ class WUnderground(RMParser):
             llon = s.location.longitude
             self.apiURL +=  str(llat) + "," + str(llon) + ".json"
 
-        self.params["useCustomStation"] = False
+        # self.params["useCustomStation"] = False
 
         log.debug(self.apiURL)
         d = self.openURL(self.apiURL)
