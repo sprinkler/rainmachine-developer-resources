@@ -22,6 +22,9 @@ class METNOParseAction:
 
 class METNO(RMParser):
     parserName = "METNO Parser"
+    parserDescription = "Global weather service from Norwegian Meteorological Institute http://met.no"
+    parserForecast = True
+    parserHistorical = False
     parserEnabled = True
     parserDebug = False
     parserInterval = 21600

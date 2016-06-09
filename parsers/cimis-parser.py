@@ -8,12 +8,16 @@
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
 from RMUtilsFramework.rmTimeUtils import *
+from RMUtilsFramework.rmUtils import convertWindFrom2mTo10m, convertRadiationFromWattsToMegaJoules
 
 import datetime
 import json
 
 class CIMIS(RMParser):
     parserName = "CIMIS Parser"
+    parserDescription = "California Irrigation Management Information System weather stations"
+    parserForecast = False
+    parserHistorical = True
     parserID = "cimis"
     parserInterval = 6 * 3600
     parserEnabled = False
@@ -40,14 +44,13 @@ class CIMIS(RMParser):
         log.debug("Days: %d Intervals: %d" % (days, intervals))
 
         for i in range(0, intervals):
-            startDay = lastIntervalStartDay - datetime.timedelta(days=1) #CIMIS real data starts from yesterday
+            startDay = lastIntervalStartDay - datetime.timedelta(days=1) # CIMIS real data starts from yesterday
             endDay = startDay - datetime.timedelta(days=(days + 1))
             lastIntervalStartDay = endDay
             try:
-                log.debug("Running CIMIS for startDay: %s endDay: %s" % (startDay, endDay))
                 self.__retrieveData(endDay, startDay) # we call with startDay/endDay swapped because CIMIS expects historic intervals
             except Exception, e:
-                log.error("*** Error running cimis parser")
+                log.error("*** Error running CIMIS parser")
                 self.lastKnownError = "Error: Data retrieval failed"
                 log.exception(e)
 
@@ -101,11 +104,11 @@ class CIMIS(RMParser):
 
         try:
             d = self.openURL(URL, URLParams, encodeParameters=False)
+
             if d is None:
                 return
 
             observation = json.loads(d.read())
-
             daily = []
 
             try:
@@ -113,7 +116,7 @@ class CIMIS(RMParser):
             except Exception, e:
                 log.error("*** No daily information found in response!")
                 log.exception(e)
-                self.lastKnownError('Warning: No daily information')
+                self.lastKnownError = 'Warning: No daily information'
 
             for entry in daily:
                 timestamp = entry.get("Date")
@@ -124,8 +127,9 @@ class CIMIS(RMParser):
                 avgTemp = entry.get("DayAirTmpAvg")["Value"]
                 minTemp = entry.get("DayAirTmpMin")["Value"]
                 maxTemp = entry.get("DayAirTmpMax")["Value"]
+                wind = entry.get("DayWindSpdAvg")["Value"]
 
-                if avgTemp is None or minTemp is None or maxTemp is None:
+                if minTemp is None or maxTemp is None:
                     continue
 
                 self.addValue(RMParser.dataType.TEMPERATURE, timestamp, self.__toFloat(avgTemp))
@@ -134,24 +138,22 @@ class CIMIS(RMParser):
                 self.addValue(RMParser.dataType.RH, timestamp, self.__toFloat(entry.get("DayRelHumAvg")["Value"]))
                 self.addValue(RMParser.dataType.MINRH, timestamp, self.__toFloat(entry.get("DayRelHumMin")["Value"]))
                 self.addValue(RMParser.dataType.MAXRH, timestamp, self.__toFloat(entry.get("DayRelHumMax")["Value"]))
-                self.addValue(RMParser.dataType.WIND, timestamp, self.__toFloat(entry.get("DayWindSpdAvg")["Value"]))
+                self.addValue(RMParser.dataType.WIND, timestamp, convertWindFrom2mTo10m(wind))
                 self.addValue(RMParser.dataType.RAIN, timestamp, self.__toFloat(entry.get("DayPrecip")["Value"]))
                 self.addValue(RMParser.dataType.DEWPOINT, timestamp, self.__toFloat(entry.get("DayDewPnt")["Value"]))
                 self.addValue(RMParser.dataType.PRESSURE, timestamp, self.__toFloat(entry.get("DayVapPresAvg")["Value"]))
                 self.addValue(RMParser.dataType.ET0, timestamp, self.__toFloat(entry.get("DayAsceEto")["Value"]))
 
                 # We receive solar radiation in watt/m2 we need in mjoules/m2
-                solarRadiation = self.__toFloat(entry.get("DaySolRadAvg")["Value"])
-                if solarRadiation is not None:
-                    solarRadiation *= 0.0864;
-
+                solarRadiation = entry.get("DaySolRadAvg")["Value"]
+                solarRadiation = convertRadiationFromWattsToMegaJoules(solarRadiation)
                 self.addValue(RMParser.dataType.SOLARRADIATION, timestamp, solarRadiation)
 
             if self.parserDebug:
                 log.debug(self.result)
 
         except Exception, e:
-            log.error("*** Error retrieving data from cimis")
+            log.error("*** Error retrieving data from CIMIS")
             log.exception(e)
 
     def __toFloat(self, value):

@@ -15,6 +15,9 @@ import datetime, time, random, math
 
 class SimulatorParser(RMParser):
     parserName = "Simulator Parser"
+    parserDescription = "Simulated Fake weather data for developers"
+    parserForecast = True
+    parserHistorical = True
     parserEnabled = False
     parserDebug = False
     parserInterval = 3 * 3600

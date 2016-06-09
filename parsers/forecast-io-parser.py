@@ -13,6 +13,9 @@ import json
 
 class ForecastIO(RMParser):
     parserName = "ForecastIO Parser"
+    parserDescription = "Global weather service from https://forecast.io"
+    parserForecast = True
+    parserHistorical = False
     parserID = "forecastio"
     parserInterval = 3 * 3600
     parserEnabled = False
@@ -28,6 +31,10 @@ class ForecastIO(RMParser):
 
     def perform(self):
         s = self.settings
+
+        # Direct Forecast.io
+        #URL = "https://api.forecast.io/forecast/d1deb05ce0bf3858054236e0171077e5/" + \
+        #        `s.location.latitude` + "," + `s.location.longitude`
 
         appKey = self.params.get("appKey", None)
         if appKey is None:

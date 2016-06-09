@@ -14,6 +14,9 @@ import datetime, calendar
 
 class WUnderground(RMParser):
     parserName = "WUnderground Parser"
+    parserDescription = "Global weather service with personal weather station access from Weather Underground"
+    parserForecast = True
+    parserHistorical = True
     parserEnabled = False
     parserDebug = False
     parserInterval = 6 * 3600
@@ -22,7 +25,8 @@ class WUnderground(RMParser):
               , "useCustomStation" : False
               , "customStationName": None
               , "_nearbyStationsIDList": []
-              , "_airportStationsIDList": []}
+              , "_airportStationsIDList": []
+              , "useSolarRadiation" :False}
     apiURL = None
     jsonResponse = None
 
@@ -30,28 +34,24 @@ class WUnderground(RMParser):
         return WUnderground.parserEnabled
 
     def perform(self):
-
         timeNow = rmNowDateTime()
         timeNow = rmNowDateTime().fromordinal(timeNow.toordinal()-1)
         yyyy = timeNow.year
         mm = timeNow.month
         dd = timeNow.day
 
-        log.debug("Wunderground parser - perform")
-
         self.params["_nearbyStationsIDList"] = []
         self.params["_airportStationsIDList"] = []
 
         apiKey =  self.params.get("apiKey", None)
-        if(apiKey is None or not apiKey or not isinstance(apiKey, str)):
-            #TODO: implement xml WUnderground parser
+        if apiKey is None or not apiKey or not isinstance(apiKey, str):
             log.error("No API Key provided")
             self.lastKnownError = "Error: No API Key provided"
             return
 
         self.apiURL = "http://api.wunderground.com/api/" + str(apiKey) + "/geolookup/conditions/hourly10day/history_" + str(yyyy) + str(mm).zfill(2) + str(dd).zfill(2) +"/q/"
 
-        if (self.params.get("useCustomStation")):
+        if self.params.get("useCustomStation"):
             stationName = self.params.get("customStationName")
             if(stationName is None or not stationName or not isinstance(stationName, str)):
                 log.error("Station ID cannot be empty")
@@ -68,8 +68,6 @@ class WUnderground(RMParser):
             llon = s.location.longitude
             self.apiURL +=  str(llat) + "," + str(llon) + ".json"
 
-        self.params["useCustomStation"] = False
-
         log.debug(self.apiURL)
         d = self.openURL(self.apiURL)
         jsonContent = d.read()
@@ -81,36 +79,46 @@ class WUnderground(RMParser):
         self.jsonResponse = json.loads(jsonContent)
 
         #populate nearby stations
-        log.debug("Wunderground parser - get nearby stations")
         self.getNearbyStations(self.jsonResponse)
 
-        log.debug("Wunderground parser - get data")
         self.getStationData(self.jsonResponse)
+
+        if self.params.get("useCustomStation") and self.params.get("useSolarRadiation"):
+            self.__getSolarRadiation()
+        elif self.params.get("useSolarRadiation"):
+            log.warning("Unable to get solar radiation. You need to specify a pws.")
 
         return
 
     def getNearbyStations(self, jsonData):
+        try:
+            nearbyStations = jsonData["location"][ "nearby_weather_stations"]
+        except:
+            log.warning("No nearby stations found!")
+            self.lastKnownError = "Warning: No nearby stations found!"
+            return
 
-        nearbyStations = jsonData["location"][ "nearby_weather_stations"]
         airportStations = None
         pwsStations = None
+
         try:
             airportStations = nearbyStations["airport"]
         except:
             log.warning("No airport stations found!")
             self.lastKnownError = "Warning: No airport stations found!"
+
         try:
             pwsStations = nearbyStations["pws"]
         except:
             log.warning("No pws stations found!")
             self.lastKnownError = "Warning: No pws stations found!"
 
-        if(pwsStations is not None):
+        if pwsStations is not None:
             arrStations = pwsStations["station"]
             for st in arrStations:
                 self.params["_nearbyStationsIDList"].append(str(st["id"]) + "(" + str(st["distance_km"]) + "km" + "; lat=" + str(round(st["lat"],2)) + ", lon=" + str(round(st["lon"],2)) + ")")
 
-        if(airportStations is not None):
+        if airportStations is not None:
             arrStations = airportStations["station"]
             for st in arrStations:
                 distance = None
@@ -133,11 +141,8 @@ class WUnderground(RMParser):
 
                 self.params["_airportStationsIDList"].append(str(st["icao"]) + "(" + str(distance) + "km" + "; lat=" + str(round(lat,2)) + ", lon=" + str(round(lon,2)) + ")" )
 
-        return self.params["_nearbyStationsIDList"]
-
     def getStationData(self, jsonData):
-
-        #daily summary
+        #daily summary for yesterday
         try:
             dailysummary = jsonData["history"]["dailysummary"][0]
             temperature = self.__toFloat(dailysummary["meantempm"])
@@ -147,13 +152,17 @@ class WUnderground(RMParser):
             minrh = self.__toFloat(dailysummary["minhumidity"])
             maxrh = self.__toFloat(dailysummary["maxhumidity"])
             dewpoint = self.__toFloat(dailysummary["meandewptm"])
-            wind = self.__toFloat(dailysummary["meanwindspdm"]) / 3.6 # convertred from kmetersph to meterps
-            pressure = self.__toFloat(dailysummary["maxpressurem"])/2 + self.__toFloat(dailysummary["minpressurem"])/2 # to be compared
-            rain = self.__toFloat(dailysummary["precipm"])
-            solarradiation = self.__toFloat(jsonData["current_observation"]["solarradiation"])  #to be compared
+            wind = self.__toFloat(dailysummary["meanwindspdm"])
+            if wind is not  None:
+                wind = wind / 3.6 # convertred from kmetersph to mps
 
-            condition = self.conditionConvert(jsonData["current_observation"]["weather"])
-            log.debug("Wunderground parser - got daily data")
+            maxpressure = self.__toFloat(dailysummary["maxpressurem"])
+            minpressure = self.__toFloat(dailysummary["minpressurem"])
+            pressure = None
+            if maxpressure is not None and minpressure is not None:
+                pressure = (maxpressure/2 + minpressure/2) / 10 #converted to from mb to kpa
+
+            rain = self.__toFloat(dailysummary["precipm"])
 
             #time utc
             jutc = jsonData["history"]["utcdate"]
@@ -162,7 +171,7 @@ class WUnderground(RMParser):
             dd = self.__toInt(jutc["mday"])
             hour = self.__toInt(jutc["hour"])
             mins = self.__toInt(jutc["min"])
-            log.debug("Wunderground parser - got time")
+            log.debug("Observations for date: %d/%d/%d Temp: %s, Rain: %s" % (yyyy, mm, dd, temperature, rain))
 
             dd = datetime.datetime(yyyy, mm, dd, hour, mins)
             timestamp = calendar.timegm( dd.timetuple())
@@ -179,8 +188,6 @@ class WUnderground(RMParser):
             self.addValue(RMParser.dataType.RAIN, timestamp, rain)
             self.addValue(RMParser.dataType.DEWPOINT, timestamp, dewpoint)
             self.addValue(RMParser.dataType.PRESSURE, timestamp, pressure)
-            self.addValue(RMParser.dataType.SOLARRADIATION, timestamp, solarradiation)
-            self.addValue(RMParser.dataType.CONDITION, timestamp, condition)
 
         except:
             log.warning("Failed to get daily summary")
@@ -200,7 +207,7 @@ class WUnderground(RMParser):
             humidityF = []
             qpf = []
             conditionF = []
-            log.debug("Wunderground parser - getting forecast")
+
             for hourF in forecastArrray:
                 tt = self.__toInt(hourF["FCTTIME"]["epoch"])
                 if(tt > maxDayTimestamp):
@@ -208,7 +215,9 @@ class WUnderground(RMParser):
                 timestampF.append(self.__toInt(tt))
                 temperatureF.append(self.__toFloat(hourF["temp"]["metric"]))
                 depointF.append(self.__toFloat(hourF["dewpoint"]["metric"]))
-                windF.append(self.__toFloat(hourF["wspd"]["metric"])/ 3.6)   # convertred from kmetersph to meterps
+                wind = self.__toFloat(hourF["wspd"]["metric"])
+                if wind is not None:
+                    windF.append(wind/ 3.6)   # convertred from kmetersph to meterps
                 humidityF.append(self.__toFloat(hourF["humidity"]))
                 qpf.append(self.__toFloat(hourF["qpf"]["metric"]))
                 conditionF.append(self.conditionConvert(hourF["condition"]))
@@ -227,12 +236,53 @@ class WUnderground(RMParser):
             self.addValues(RMParser.dataType.WIND, windF)
             self.addValues(RMParser.dataType.CONDITION, conditionF)
 
-            log.debug("Wunderground parser - got forecast")
         except:
             log.error("Failed to get forecast!")
             self.lastKnownError = "Error: Failed to get forecast"
 
-        return
+
+    def __getSolarRadiation(self):
+        historyForecast = self.jsonResponse["history"]["observations"]
+        if historyForecast is None:
+            log.debug("No hourly forecast found for solar radiation")
+            return
+
+        arrSR = []
+        arrT = []
+
+        for obsdict in historyForecast:
+            instantSr = self.__toFloat(obsdict["solarradiation"])
+            if instantSr is None:
+                log.debug("Invalid solar radiation value found in forecast")
+                return
+            arrSR.append(instantSr)
+            hour = self.__toInt(obsdict["date"]["hour"])
+            min = self.__toInt(obsdict["date"]["min"])
+            mm = hour*60 + min
+            arrT.append(mm)
+        #computing solar energy per minute (measurement unit = W*min*m-2)
+        solarRadEnergy = 0
+        for i in range(0, len(arrSR)):
+            dt = arrT[i]
+            if(i>0):
+                dt -= arrT[i-1]
+            solarRadEnergy += dt * arrSR[i]
+
+        #converting to W*h*m-2
+        solarRadEnergy = solarRadEnergy / 60
+        #converting to MJ*m-2
+        solarRadEnergyMJ = solarRadEnergy * 3.6 /1000
+
+        #time utc
+        jutc = self.jsonResponse["history"]["utcdate"]
+        yyyy = self.__toInt(jutc["year"])
+        mm = self.__toInt(jutc["mon"])
+        dd = self.__toInt(jutc["mday"])
+        hour = self.__toInt(jutc["hour"])
+        mins = self.__toInt(jutc["min"])
+        dd = datetime.datetime(yyyy, mm, dd, hour, mins)
+        timestamp = calendar.timegm( dd.timetuple())
+        self.addValue(RMParser.dataType.SOLARRADIATION, timestamp, solarRadEnergyMJ)
 
     def __parseDateTime(self, timestamp, roundToHour = True):
         if timestamp is None:

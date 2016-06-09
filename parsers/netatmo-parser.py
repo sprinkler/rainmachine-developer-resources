@@ -13,6 +13,9 @@ from urllib import urlencode
 class Netatmo(RMParser):
 
     parserName = "Netatmo Parser"
+    parserDescription = "Weather observations from NetAtmo personal weather station"
+    parserForecast = False
+    parserHistorical = True
     parserEnabled = False
     parserDebug = False
     parserInterval = 6 * 3600
@@ -30,7 +33,7 @@ class Netatmo(RMParser):
               , "_availableModules" : []
               }
 
-    baseURL = "https://api.netatmo.net/"
+    baseURL = "https://api.netatmo.com/"
     authReq = baseURL + "oauth2/token"
     getUserReq = baseURL + "api/getuser"
     deviceListReq = baseURL + "api/getstationsdata"
@@ -186,13 +189,13 @@ class Netatmo(RMParser):
             "password" : self.password,
             "scope" : "read_station"
          }
-        # try:
-        resp = self.postRequest(self.authReq, postParams)
-        self.accessToken = resp['access_token']
-        self.refreshToken = resp['refresh_token']
-        self.accessTokenExpiration = int(resp['expire_in']) + time.time()
-        # except:
-        log.debug("Failed to get oauth token")
+        try:
+            resp = self.postRequest(self.authReq, postParams)
+            self.accessToken = resp['access_token']
+            self.refreshToken = resp['refresh_token']
+            self.accessTokenExpiration = int(resp['expire_in']) + time.time()
+        except:
+            log.debug("Failed to get oauth token")
 
     def getData(self):
         postParams = {
@@ -211,11 +214,14 @@ class Netatmo(RMParser):
             resp = urllib2.urlopen(req).read()
         except urllib2.URLError, e:
             log.debug(e)
-            try:
-                context = ssl._create_unverified_context()
-                resp = urllib2.urlopen(req, context=context).read()
-            except Exception, e:
-                log.exception(e)
+            if hasattr(ssl, '_create_unverified_context'): #for mac os only in order to ignore invalid certificates
+                try:
+                    context = ssl._create_unverified_context()
+                    resp = urllib2.urlopen(req, context=context).read()
+                except Exception, e:
+                    log.exception(e)
+                    return None
+            else:
                 return None
 
         return json.loads(resp)

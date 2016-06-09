@@ -15,6 +15,9 @@ import urllib2
 
 class FAWN(RMParser):
     parserName = "FAWN Parser"
+    parserDescription = "Florida Automated Weather Network observations"
+    parserForecast = False
+    parserHistorical = True
     parserEnabled = False
     parserDebug = True
     parserInterval = 3600
@@ -106,10 +109,8 @@ class FAWN(RMParser):
                     self.addValue(RMParser.dataType.TEMPERATURE, timestamp, self.__toFloat(entry.get("t2m_avg")))
                     self.addValue(RMParser.dataType.MINTEMP, timestamp, self.__toFloat(entry.get("t2m_min")))
                     self.addValue(RMParser.dataType.MAXTEMP, timestamp, self.__toFloat(entry.get("t2m_max")))
-                    # km/h -> m/s (10m -> 2m)
-                    # fU2z * 4.87 / math.log(67.8 * fU2m - 5.42)
-                    # math.log(67.8 * 10 - 5.42) = 6.51112106351
-                    self.addValue(RMParser.dataType.WIND, timestamp, 4.87 * 0.27777777777778 * self.__toFloat(entry.get("ws_avg")) / 6.51112106351)
+                    # km/h -> m/s
+                    self.addValue(RMParser.dataType.WIND, timestamp, 0.27777777777778 * self.__toFloat(entry.get("ws_avg")))
                     # cm -> mm
                     self.addValue(RMParser.dataType.RAIN, timestamp, 10 * self.__toFloat(entry.get("rain_sum")))
                     self.addValue(RMParser.dataType.DEWPOINT, timestamp, self.__toFloat(entry.get("dp_avg")))

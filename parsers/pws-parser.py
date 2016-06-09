@@ -13,6 +13,9 @@ from RMUtilsFramework.rmTimeUtils import rmCurrentTimestamp
 
 class PWS(RMParser):
     parserName = "PWS Parser"
+    parserDescription = "Personal Weather Station direct data download in pws format"
+    parserForecast = False
+    parserHistorical = True
     parserEnabled = False
     parserDebug = False
     parserInterval = 6 * 3600

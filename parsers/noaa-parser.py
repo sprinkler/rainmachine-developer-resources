@@ -17,6 +17,9 @@ from xml.etree import ElementTree as e
 
 class NOAA(RMParser):
     parserName = "NOAA Parser"
+    parserDescription = "North America weather forecast from National Oceanic and Atmospheric Administration"
+    parserForecast = True
+    parserHistorical = False
     parserEnabled = True
     parserDebug = False
     parserInterval = 6 * 3600
