@@ -10,13 +10,17 @@ var API = APISync;
 
 function _API(async) {
 
-var host = "private-bd9e-rainmachine.apiary-mock.com";
+var host = window.location.hostname;
+//var host = "private-bd9e-rainmachine.apiary-mock.com";
 //var host = "127.0.0.1";
-//var host = window.location.hostname;
+//var host = "5.2.191.144";
+//var host = "192.168.12.129";
 
-var port = "443";
-//var port = "18080";
 var port = window.location.port;
+//var port = "443";
+//var port = "18080";
+//var port = "8080";
+//var port = "8888";
 
 var apiUrl = "https://" + host + ":" + port + "/api/4";
 //var apiUrl = "http://" + host + ":" + port + "/api/4";
@@ -35,13 +39,13 @@ function rest(type, apiCall, data, isBinary, extraHeaders)
 	else
 		url = apiUrl + apiCall;
 
-	console.log("%s API call: %s", async ? "ASYNC":"*sync*", url);
+	//console.log("%s API call: %s", async ? "ASYNC":"*sync*", url);
 
 	if (async) {
 		r.onload = function() {
 			if (r.readyState === 4) {
 				if (r.status === 200) {
-					console.info("REST ASYNC: SUCCESS  %s reply: %o", url, r);
+					//console.info("REST ASYNC: SUCCESS  %s reply: %o", url, r);
 					a.resolve(JSON.parse(r.responseText));
 				} else {
 					console.error("REST ASYNC: FAIL reply for %s, ready: %s, status: %s", url, r.readyState, r.status);
@@ -147,6 +151,12 @@ _API.prototype.auth = function(password, remember)
 	var token = reply.access_token;
 	this.setAccessToken(token);
 	return token;
+};
+
+_API.prototype.totp = function()
+{
+	var url = this.URL.auth + "/totp";
+	return this.get(url, null);
 };
 
 _API.prototype.authChange = function(oldPass, newPass)
@@ -445,7 +455,7 @@ _API.prototype.setZonesProperties = function(id, properties, advancedProperties)
 	var data = properties;
 
 	if (advancedProperties !== undefined && advancedProperties !== null)
-		data.advanced = advancedProperties;
+		data.waterSense = advancedProperties;
 
 	return this.post(url, data, null);
 }
@@ -687,6 +697,28 @@ _API.prototype.reboot = function()
 {
 	var url = this.URL.machine + "/reboot";
 	var data = {};
+
+	return this.post(url, data, null);
+}
+
+_API.prototype.getShortDetection = function()
+{
+	var url = this.URL.machine + "/shortdetection";
+	return this.get(url, null);
+}
+
+_API.prototype.setShortDetection = function(enabled)
+{
+	var url = this.URL.machine + "/shortdetection";
+	var data = {
+		watchforshort: 0,
+		watchforload: 0
+	};
+
+	if (enabled) {
+		data.watchforshort = 1;
+		data.watchforload = 2;
+	}
 
 	return this.post(url, data, null);
 }
