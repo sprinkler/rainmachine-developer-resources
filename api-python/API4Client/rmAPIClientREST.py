@@ -4,6 +4,7 @@
 #          Ciprian Misaila <ciprian.misaila@mini-box.com>
 
 import urllib2, os, ssl, json
+from RMUtilsFramework.rmLogging import log
 
 class RMAPIClientProtocol:
     """
@@ -79,19 +80,23 @@ class RMAPIClientREST(object):
             req.add_data(data=data)
         else:
             req.add_data(data=json.dumps(data))
-            req.add_header("Content-type","text/plain")
+            req.add_header("Content-type", "text/plain")
 
+        req.add_header('User-Agent', "RMAPIClient")
 
         if extraHeaders is not None:
             for header in extraHeaders:
                 req.add_header(header)
 
         try:
-            print("REST: %s : %s" % (req.get_method(), req.get_full_url()))
-            r = urllib2.urlopen(req)
+            log.info("REST: %s : %s" % (req.get_method(), req.get_full_url()))
+            if self.context is not None:
+                r = urllib2.urlopen(req, context=self.context)
+            else:
+                r = urllib2.urlopen(req)
             data = r.read()
         except Exception, e:
-            print("Cannot OPEN URL: %s" % e)
+            log.error("Cannot OPEN URL: %s" % e)
             return RMAPIClientErrors.OPEN
 
         if asJSON:
@@ -99,7 +104,7 @@ class RMAPIClientREST(object):
                 data = json.loads(data)
                 return data
             except:
-                print("Cannot convert reply to JSON.")
+                log.info("Cannot convert reply to JSON.")
                 return RMAPIClientErrors.JSON
 
         return  data
@@ -112,9 +117,12 @@ class RMAPIClientREST(object):
         return None
 
     def __getContext(self):
-        localOs = os.uname()
-        if localOs[0] == "Darwin":
-            return ssl._create_unverified_context() #needed for mac os
+        try:
+            return ssl._create_unverified_context()
+        except:
+            return None
+
+        return None
 
     def __init__(self, host="127.0.0.1", port="8080", protocol=RMAPIClientProtocol.HTTPS):
         self.token = None
