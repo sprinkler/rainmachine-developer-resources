@@ -76,12 +76,13 @@ class RMAPIClientREST(object):
         except:
             return RMAPIClientErrors.REQ
 
-        if isBinary:
-            req.add_data(data=data)
-        else:
-            req.add_data(data=json.dumps(data))
-            req.add_header("Content-type", "text/plain")
+        if data is not None:
+            if isBinary:
+                req.add_data(data=data)
+            else:
+                req.add_data(data=json.dumps(data))
 
+        req.add_header("Content-type", "text/plain")
         req.add_header('User-Agent', "RMAPIClient")
 
         if extraHeaders is not None:
