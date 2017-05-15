@@ -37,7 +37,7 @@ class METNO(RMParser):
 
     def perform(self):
         s = self.settings
-        URL = "http://api.met.no/weatherapi/locationforecastlts/1.2/"
+        URL = "http://api.met.no/weatherapi/locationforecastlts/1.3/"
         URLParams = [("lat", s.location.latitude),
                   ("lon", s.location.longitude),
                   ("msl", int(round(s.location.elevation)))]
