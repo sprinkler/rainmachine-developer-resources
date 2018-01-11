@@ -25,7 +25,7 @@ class PWS(RMParser):
 
     def distanceToStation(self, lat, lon):
         s = self.settings
-        llat = s.location.latidude
+        llat = s.location.latitude
         llon = s.location.longitude
         return distanceBetweenGeographicCoordinatesAsKm(lat, lon, llat, llon)
 

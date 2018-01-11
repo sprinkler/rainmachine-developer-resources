@@ -9,13 +9,10 @@ import os
 import copy
 
 from RMUtilsFramework import rmTimeUtils
-from RMDatabaseFramework.rmUserSettingsTable import RMUserSettingsTable, RMUserSettingsHourlyRestrictionsTable
 from RMUtilsFramework.rmLogging import log
 from RMUtilsFramework.rmTimeUtils import *
 import RMUtilsFramework.rmUtils as rmUtils
-from RMUtilsFramework.rmAuth import RMAuth
-from RMDataFramework.rmRestrictions import RMRestrictions
-from RMDataFramework.rmCloudSettings import RMCloudSettings
+from RMDatabaseFramework.rmUserSettingsTable import RMUserSettingsTable
 from RMCore.version import __version__
 
 class RMUserSettingsLocation:
@@ -59,7 +56,7 @@ class RMUserSettings:
         self.useDemoData = False
         self.firstRun = False
 
-        self.auth = RMAuth()
+        self.auth = {}
 
         self.netName = "RainMachine"
         self.locationUnits = "C"
@@ -93,14 +90,14 @@ class RMUserSettings:
         self.touchProgramToRun = None
 
         self.location = RMUserSettingsLocation()
-        self.cloud = RMCloudSettings()
+        self.cloud = {}
 
         self.useRainSensor = False # If we should use the hardware rainsensor in restricting watering
         self.rainSensorIsNormallyClosed = True # If rain sensors opens the circuit when rain is detected
         self.useSoftwareRainSensor = False  # If we should use a software rainsensor
         self.softwareRainSensorMinQPF = 5.0  # The minimum QPF for a day for which we restrict
 
-        self.restrictions = RMRestrictions()
+        self.restrictions = {}
 
         self.__settingsTable = None
         self.__hourlyRestrictionsTable = None
@@ -201,11 +198,9 @@ class RMUserSettings:
 
     def setDatabase(self, settingsDatabase):
         self.__settingsTable = RMUserSettingsTable(settingsDatabase)
-        self.restrictions.setDatabase(settingsDatabase)
 
     def loadSettings(self):
         self.__settingsTable.loadAllRecords(self)
-        self.restrictions.loadSettings()
         self.__defaultSettings = copy.deepcopy(self)
 
     def saveSettings(self):

@@ -8,7 +8,7 @@ class ExampleParser(RMParser):
     parserDescription = "Example parser for developers" # A short description of your parser
     parserForecast = False # True if parser provides future forecast data
     parserHistorical = True # True if parser also provides historical data (only actual observed data)
-    parserInterval = 3600             # Your parser running interval in seconds, data will only be mixed in hourly intervals
+    parserInterval = 6 * 3600             # Your parser running interval in seconds, data will only be mixed in hourly intervals
     parserDebug = False
     params = {}
 

@@ -9,11 +9,15 @@
 <body onload="testAPI()">
 	<script language="javascript">
 	    function testAPI() {
+			var div = document.getElementById("output");
 			//asynchronous example
-			APIAsync.getApiVer().then(function(receivedData){ console.log("ASYNC CALL: %o", receivedData);});
+			APIAsync.getApiVer().then(function(data){ 
+				div.textContent +=  "API Version: " + data.apiVer + " Hardware Version: " + data.hwVer + " Software Version: " + data.swVer; 
+			});
 			//synchronous example
 			console.log("SYNC CALL: %o", APISync.getApiVer());
 	    }
 	</script>
 </body>
+<div id=output></div>
 </html>

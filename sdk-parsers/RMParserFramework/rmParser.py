@@ -8,13 +8,14 @@ from functools import wraps
 import errno
 import os
 import signal
-import urllib, urllib2
+import urllib, urllib2, ssl
 import sys
 import datetime
 
 from RMDataFramework.rmWeatherData import *
 from RMUtilsFramework.rmLogging import log
 from RMUtilsFramework.rmTimeUtils import rmCurrentDayTimestamp, rmGetStartOfDayUtc
+from RMFormulaFramework.formula import asceDaily
 USE_THREADING__ = False
 ALLOW_HISTORIC_PARSERS = True
 
@@ -102,7 +103,7 @@ class RMParser(object):
     def perform(self):
         log.warning("*** Perform method not implemented by parser '%s'" % self.parserName)
 
-    def openURL(self, url, params = None, encodeParameters = True):
+    def openURL(self, url, params = None, encodeParameters = True, headers = {}):
         if params:
             if encodeParameters:
                 query_string = urllib.urlencode(params)
@@ -114,11 +115,23 @@ class RMParser(object):
         log.debug("Parser '%s': downloading from %s" % (self.parserName, url))
 
         try:
-            res = urllib2.urlopen(url=url, timeout=60)
+            req = urllib2.Request(url=url, headers=headers)
+            res = urllib2.urlopen(url=req, timeout=60)
             return res
         except Exception, e:
-            log.error("*** Error in parser '%s' while downloading data from %s, error: %s" % (self.parserName, url, e))
-            self.lastKnownError = "Error: Can not open url"
+            if hasattr(ssl, '_create_unverified_context'): #for mac os only in order to ignore invalid certificates
+                try:
+                    context = ssl._create_unverified_context()
+                    res = urllib2.urlopen(url=req, timeout=60, context=context)
+                    return res
+                except Exception, e:
+                    log.error("*** Error in parser '%s' while downloading data from %s, error: %s" % (self.parserName, url, e))
+                    self.lastKnownError = "Error: Can not open url"
+                    log.exception(e)
+                    return None
+            else:
+                log.error("*** Error in parser '%s' while downloading data from %s, error: %s" % (self.parserName, url, e))
+                self.lastKnownError = "Error: Can not open url"
         return None
 
     def addValue(self, key,timestamp, value, roundToHour = True):
@@ -172,4 +185,3 @@ class RMParser(object):
 
     def dump(self):
         log.debug("%s" % (self.result))
-

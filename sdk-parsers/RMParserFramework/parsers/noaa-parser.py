@@ -25,34 +25,90 @@ class NOAA(RMParser):
     parserInterval = 6 * 3600
     params = {}
 
+
     def isEnabledForLocation(self, timezone, lat, long):
         if NOAA.parserEnabled and timezone:
             return timezone.startswith("America") or timezone.startswith("US")
         return False
 
+
     def perform(self):
         s = self.settings
-        URL = "http://graphical.weather.gov/xml/sample_products/browser_interface/ndfdXMLclient.php"
-        URLDaily = "http://graphical.weather.gov/xml/sample_products/browser_interface/ndfdBrowserClientByDay.php"
-        URLParams = [("lat", s.location.latitude),
-                  ("lon", s.location.longitude)] + \
-            [
-                ("startDate", datetime.date.today().strftime("%Y-%m-%d")),
-                #("endDate", (datetime.date.today() + datetime.timedelta(6)).strftime("%Y-%m-%d")),
-                ("format", "24 hourly"),
-                ("numDays", 6),
-                ("Unit", "e")
-            ]
 
-        #-----------------------------------------------------------------------------------------------
-        #
-        # Get hourly data.
-        #
-        d = self.openURL(URL, URLParams)
+        # Order is important
+        urls = [
+            {
+                "host": "https://noaa.rainmachine.com",
+                "headers": {"Host": "graphical.weather.gov"},
+                "params": []
+            },
+            {
+                "host": "https://forecast.rainmachine.com",
+                "headers": {},
+                "params": [("token", "")]
+            },
+            {
+                "host": "https://graphical.weather.gov",
+                "headers": {},
+                "params": []
+            },
+        ]
+
+        hourlyPath = "/xml/sample_products/browser_interface/ndfdXMLclient.php"
+        dailyPath = "/xml/sample_products/browser_interface/ndfdBrowserClientByDay.php"
+        baseParams = [
+                        ("lat", s.location.latitude),
+                        ("lon", s.location.longitude)
+                    ] + \
+                    [
+                        ("startDate", datetime.date.today().strftime("%Y-%m-%d")),
+                        #("endDate", (datetime.date.today() + datetime.timedelta(6)).strftime("%Y-%m-%d")),
+                        ("format", "24 hourly"),
+                        ("numDays", 6),
+                        ("Unit", "e")
+                    ]
+
+        baseHeaders = {"User-Agent": "RainMachine v2"}
+
+        hasHourly = False
+        hasDaily = False
+
+        for url in urls:
+            hourlyURL = url["host"] + hourlyPath
+            dailyUrl = url["host"] + dailyPath
+            urlParams = baseParams + url["params"]
+            url["headers"].update(baseHeaders)
+
+            if not hasHourly:
+                log.info("Fetching Hourly data from %s" % hourlyURL)
+                hasHourly = self.getHourlyData(hourlyURL, urlParams, url["headers"])
+
+            if not hasDaily:
+                log.info("Fetching Daily data from %s " % dailyUrl)
+                hasDaily = self.getDailyData(dailyUrl, urlParams, url["headers"])
+
+            if hasHourly and hasDaily:
+                break
+
+
+        if self.parserDebug:
+            log.debug(self.result)
+
+
+
+    #-----------------------------------------------------------------------------------------------
+    #
+    # Get hourly data.
+    #
+    def getHourlyData(self, URL, URLParams, headers):
+
+        d = self.openURL(URL, URLParams, headers=headers)
         if d is None:
-            return
-
-        tree = e.parse(d)
+            return False
+        try:
+            tree = e.parse(d)
+        except:
+            return False
 
         if tree.getroot().tag == 'error':
             log.error("*** No hourly information found in response!")
@@ -60,53 +116,63 @@ class NOAA(RMParser):
             tree.getroot().clear()
             del tree
             tree = None
-        else:
-            # We get them in English units need in Metric units
-            maxt = self.__parseWeatherTag(tree, 'temperature', 'maximum')
-            maxt = convertFahrenheitToCelsius(maxt)
+            return False
 
-            mint = self.__parseWeatherTag(tree, 'temperature', 'minimum', useStartTimes=False) # for mint we want the end-time to be saved in DB
-            mint = convertFahrenheitToCelsius(mint)
+        # Reset lastKnownError from a previous function call
+        self.lastKnownError = ""
 
-            temp = self.__parseWeatherTag(tree, 'temperature', 'hourly')
-            temp = convertFahrenheitToCelsius(temp)
+        # We get them in English units need in Metric units
+        maxt = self.__parseWeatherTag(tree, 'temperature', 'maximum')
+        maxt = convertFahrenheitToCelsius(maxt)
 
-            qpf = self.__parseWeatherTag(tree, 'precipitation', 'liquid')
-            qpf = convertInchesToMM(qpf)
+        mint = self.__parseWeatherTag(tree, 'temperature', 'minimum', useStartTimes=False) # for mint we want the end-time to be saved in DB
+        mint = convertFahrenheitToCelsius(mint)
 
-            dew = self.__parseWeatherTag(tree, 'temperature', 'dew point')
-            dew = convertFahrenheitToCelsius(dew)
+        temp = self.__parseWeatherTag(tree, 'temperature', 'hourly')
+        temp = convertFahrenheitToCelsius(temp)
 
-            wind = self.__parseWeatherTag(tree, 'wind-speed', 'sustained')
-            wind = convertKnotsToMS(wind)
+        qpf = self.__parseWeatherTag(tree, 'precipitation', 'liquid')
+        qpf = convertInchesToMM(qpf)
 
-            # These are as percentages
-            pop = self.__parseWeatherTag(tree, 'probability-of-precipitation', '12 hour')
-            humidity = self.__parseWeatherTag(tree, 'humidity', 'relative')
-            minHumidity = self.__parseWeatherTag(tree, 'humidity', 'minimum relative')
-            maxHumidity = self.__parseWeatherTag(tree, 'humidity', 'maximum relative')
+        dew = self.__parseWeatherTag(tree, 'temperature', 'dew point')
+        dew = convertFahrenheitToCelsius(dew)
 
-            tree.getroot().clear()
-            del tree
-            tree = None
+        wind = self.__parseWeatherTag(tree, 'wind-speed', 'sustained')
+        wind = convertKnotsToMS(wind)
 
-            self.addValues(RMParser.dataType.MINTEMP, mint)
-            self.addValues(RMParser.dataType.MAXTEMP, maxt)
-            self.addValues(RMParser.dataType.TEMPERATURE, temp)
-            self.addValues(RMParser.dataType.QPF, qpf)
-            self.addValues(RMParser.dataType.DEWPOINT, dew)
-            self.addValues(RMParser.dataType.WIND, wind)
-            self.addValues(RMParser.dataType.POP, pop)
-            self.addValues(RMParser.dataType.RH, humidity)
-            self.addValues(RMParser.dataType.MINRH, minHumidity)
-            self.addValues(RMParser.dataType.MAXRH, maxHumidity)
+        # These are as percentages
+        pop = self.__parseWeatherTag(tree, 'probability-of-precipitation', '12 hour')
+        humidity = self.__parseWeatherTag(tree, 'humidity', 'relative')
+        minHumidity = self.__parseWeatherTag(tree, 'humidity', 'minimum relative')
+        maxHumidity = self.__parseWeatherTag(tree, 'humidity', 'maximum relative')
 
-        #-----------------------------------------------------------------------------------------------
-        #
-        # Get daily data.
-        #
-        d = self.openURL(URLDaily, URLParams)
-        tree = e.parse(d)
+        tree.getroot().clear()
+        del tree
+        tree = None
+
+        self.addValues(RMParser.dataType.MINTEMP, mint)
+        self.addValues(RMParser.dataType.MAXTEMP, maxt)
+        self.addValues(RMParser.dataType.TEMPERATURE, temp)
+        self.addValues(RMParser.dataType.QPF, qpf)
+        self.addValues(RMParser.dataType.DEWPOINT, dew)
+        self.addValues(RMParser.dataType.WIND, wind)
+        self.addValues(RMParser.dataType.POP, pop)
+        self.addValues(RMParser.dataType.RH, humidity)
+        self.addValues(RMParser.dataType.MINRH, minHumidity)
+        self.addValues(RMParser.dataType.MAXRH, maxHumidity)
+
+        return True
+
+    #-----------------------------------------------------------------------------------------------
+    #
+    # Get daily data.
+    #
+    def getDailyData(self, URLDaily, URLParams, headers):
+        d = self.openURL(URLDaily, URLParams, headers=headers)
+        try:
+            tree = e.parse(d)
+        except:
+            return False
 
         if tree.getroot().tag == 'error':
             log.error("*** No daily information found in response!")
@@ -114,27 +180,31 @@ class NOAA(RMParser):
             tree.getroot().clear()
             del tree
             tree = None
-        else:
-            conditions = self.__parseWeatherTag(tree, 'conditions-icon', 'forecast-NWS', 'icon-link')
-            parsedConditions = []
+            return False
 
-            for c in conditions:
-                if c and len(c) >= 2:
-                    try:
-                        cv = self.conditionConvert(c[1].rsplit('.')[-2].rsplit('/')[-1])
-                    except:
-                        cv = RMWeatherConditions.Unknown
+        # Reset lastKnownError from a previous function call
+        self.lastKnownError = ""
 
-                    parsedConditions.append((c[0], cv))
+        conditions = self.__parseWeatherTag(tree, 'conditions-icon', 'forecast-NWS', 'icon-link')
+        parsedConditions = []
 
-            tree.getroot().clear()
-            del tree
-            tree = None
+        for c in conditions:
+            if c and len(c) >= 2:
+                try:
+                    cv = self.conditionConvert(c[1].rsplit('.')[-2].rsplit('/')[-1])
+                except:
+                    cv = RMWeatherConditions.Unknown
 
-            self.addValues(RMParser.dataType.CONDITION, parsedConditions)
+                parsedConditions.append((c[0], cv))
 
-        if self.parserDebug:
-            log.debug(self.result)
+        tree.getroot().clear()
+        del tree
+        tree = None
+
+        self.addValues(RMParser.dataType.CONDITION, parsedConditions)
+
+        return True
+
 
     def __parseDateTime(self, str, roundToHour = True):
         #NOAA reports in location local time needs UTC conversion
@@ -199,8 +269,6 @@ class NOAA(RMParser):
         result = zip(forecastTimes, values)
         result = [z for z in result if dayTimestamp <= z[0] < maxDayTimestamp]
         return result
-
-
 
 
     def conditionConvert(self, conditionStr):

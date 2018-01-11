@@ -5,7 +5,7 @@
 
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
-from RMUtilsFramework.rmTimeUtils import rmNowDateTime
+from RMUtilsFramework.rmTimeUtils import rmNowDateTime, rmGetStartOfDay
 from RMUtilsFramework.rmUtils import distanceBetweenGeographicCoordinatesAsKm
 from RMDataFramework.rmUserSettings import globalSettings
 import json,time
@@ -35,22 +35,26 @@ class WUnderground(RMParser):
 
     def perform(self):
         timeNow = rmNowDateTime()
-        timeNow = rmNowDateTime().fromordinal(timeNow.toordinal()-1)
+        timeYesterday = rmNowDateTime().fromordinal(timeNow.toordinal()-1)
+        yyyyy = timeYesterday.year
+        mmy = timeYesterday.month
+        ddy = timeYesterday.day
         yyyy = timeNow.year
         mm = timeNow.month
         dd = timeNow.day
 
         self.params["_nearbyStationsIDList"] = []
         self.params["_airportStationsIDList"] = []
-
+        self.lastKnownError = ""
         apiKey =  self.params.get("apiKey", None)
         if apiKey is None or not apiKey or not isinstance(apiKey, str):
             log.error("No API Key provided")
             self.lastKnownError = "Error: No API Key provided"
             return
 
-        self.apiURL = "http://api.wunderground.com/api/" + str(apiKey) + "/geolookup/conditions/hourly10day/history_" + str(yyyy) + str(mm).zfill(2) + str(dd).zfill(2) +"/q/"
+        self.apiURL = "http://api.wunderground.com/api/" + str(apiKey) + "/geolookup/conditions/forecast10day/yesterday/q/"
 
+        success = False
         if self.params.get("useCustomStation"):
             stationName = self.params.get("customStationName")
             if(stationName is None or not stationName or not isinstance(stationName, str)):
@@ -58,25 +62,48 @@ class WUnderground(RMParser):
                 self.lastKnownError = "Error: Station ID cannot be empty"
                 return
             log.debug("getting data from specified station")
-            if len(stationName) > 4:
-                self.apiURL += "pws:" + stationName + ".json" #url for pws
-            else:
-                self.apiURL += stationName + ".json" #url for pws
+            #try to split
+
+            self.arrStationNames = stationName.split(",")
+
+            for stationName in self.arrStationNames:
+                if len(stationName) > 4:
+                    self.csapiURL = self.apiURL + "pws:" + stationName + ".json"  # url for pws
+                else:
+                    self.csapiURL = self.apiURL + stationName + ".json"  # url for airport stations
+                log.debug(self.apiURL)
+
+                d = self.openURL(self.csapiURL)
+                jsonContent = d.read()
+                if jsonContent is None:
+                    self.lastKnownError = "Error: Bad response"
+                    continue
+                self.jsonResponse = json.loads(jsonContent)
+                err = self.jsonResponse.get("response").get("error")
+                if not err:
+                    success = True
+                    break
+                self.lastKnownError = "Error: Failed to get custom station"
+                log.error(self.lastKnownError)
         else:
             s = self.settings
             llat = s.location.latitude
             llon = s.location.longitude
             self.apiURL +=  str(llat) + "," + str(llon) + ".json"
+            log.debug(self.apiURL)
+            d = self.openURL(self.apiURL)
+            jsonContent = d.read()
+            if jsonContent is None:
+                self.lastKnownError = "Error: Bad response"
+                return
+            self.jsonResponse = json.loads(jsonContent)
+            err = self.jsonResponse.get("response").get("error")
+            if not err:
+                success = True
 
-        log.debug(self.apiURL)
-        d = self.openURL(self.apiURL)
-        jsonContent = d.read()
-        if jsonContent is None:
-            log.error("Failed to get WUnderground JSON contents")
-            self.lastKnownError = "Error: Bad response"
+        if not success:
+            log.error(self.lastKnownError)
             return
-
-        self.jsonResponse = json.loads(jsonContent)
 
         #populate nearby stations
         self.getNearbyStations(self.jsonResponse)
@@ -136,10 +163,12 @@ class WUnderground(RMParser):
 
                 if distance is not None:
                     distance = self.__toInt(round(distance))
+                    infoStr = "(" + str(distance) + "km" + "; lat=" + str(round(lat, 2)) + ", lon=" + str(round(lon, 2)) + ")"
                 else:
                     distance = -1
+                    infoStr = "(unknown distance)"
 
-                self.params["_airportStationsIDList"].append(str(st["icao"]) + "(" + str(distance) + "km" + "; lat=" + str(round(lat,2)) + ", lon=" + str(round(lon,2)) + ")" )
+                self.params["_airportStationsIDList"].append(str(st["icao"]) + infoStr)
 
     def getStationData(self, jsonData):
         #daily summary for yesterday
@@ -186,6 +215,7 @@ class WUnderground(RMParser):
             self.addValue(RMParser.dataType.MAXRH, timestamp, maxrh)
             self.addValue(RMParser.dataType.WIND, timestamp, wind)
             self.addValue(RMParser.dataType.RAIN, timestamp, rain)
+            # self.addValue(RMParser.dataType.QPF, timestamp, rain) # uncomment to report measured rain as previous day QPF
             self.addValue(RMParser.dataType.DEWPOINT, timestamp, dewpoint)
             self.addValue(RMParser.dataType.PRESSURE, timestamp, pressure)
 
@@ -193,6 +223,9 @@ class WUnderground(RMParser):
             log.warning("Failed to get daily summary")
             self.lastKnownError = "Warning: Failed to get daily summary"
 
+        self.__getSimpleForecast()
+
+    def __getForecastHourly(self, jsonData):
         try:
             #forecast hourly
             tuple = datetime.datetime.fromtimestamp(int(time.time())).timetuple()
@@ -210,7 +243,7 @@ class WUnderground(RMParser):
 
             for hourF in forecastArrray:
                 tt = self.__toInt(hourF["FCTTIME"]["epoch"])
-                if(tt > maxDayTimestamp):
+                if tt > maxDayTimestamp:
                     break
                 timestampF.append(self.__toInt(tt))
                 temperatureF.append(self.__toFloat(hourF["temp"]["metric"]))
@@ -237,8 +270,55 @@ class WUnderground(RMParser):
             self.addValues(RMParser.dataType.CONDITION, conditionF)
 
         except:
-            log.error("Failed to get forecast!")
+            log.error("Failed to get hourly forecast!")
             self.lastKnownError = "Error: Failed to get forecast"
+
+    def __getSimpleForecast(self):
+        try:
+            tuple = datetime.datetime.fromtimestamp(int(time.time())).timetuple()
+            dayTimestamp = int(datetime.datetime(tuple.tm_year, tuple.tm_mon, tuple.tm_mday).strftime("%s"))
+            maxDayTimestamp = dayTimestamp + globalSettings.parserDataSizeInDays * 86400
+            simpleForecast = self.jsonResponse["forecast"]["simpleforecast"]["forecastday"]
+
+            timestamp = []
+            temperatureMax = []
+            temperatureMin = []
+            wind = []
+            humidity = []
+            qpf = []
+            condition = []
+
+            for dayF in simpleForecast:
+                tt = self.__toInt(dayF["date"]["epoch"])
+                tt = rmGetStartOfDay(tt)
+                if tt > maxDayTimestamp:
+                    break
+                timestamp.append(self.__toInt(tt))
+                temperatureMax.append(self.__toFloat(dayF["high"]["celsius"]))
+                temperatureMin.append(self.__toFloat(dayF["low"]["celsius"]))
+                windValue = self.__toFloat(dayF["avewind"]["kph"])
+                if windValue is not None:
+                    wind.append(windValue / 3.6)  # convertred from kmetersph to meterps
+                humidity.append(self.__toFloat(dayF["avehumidity"]))
+                qpf.append(self.__toFloat(dayF["qpf_allday"]["mm"]))
+                condition.append(self.conditionConvert(dayF["conditions"]))
+
+            temperatureMax = zip(timestamp, temperatureMax)
+            temperatureMin = zip(timestamp, temperatureMin)
+            wind = zip(timestamp, wind)
+            humidity = zip(timestamp, humidity)
+            qpf = zip(timestamp, qpf)
+            condition = zip(timestamp, condition)
+
+            self.addValues(RMParser.dataType.RH, humidity)
+            self.addValues(RMParser.dataType.MAXTEMP, temperatureMax)
+            self.addValues(RMParser.dataType.MINTEMP, temperatureMin)
+            self.addValues(RMParser.dataType.QPF, qpf)
+            self.addValues(RMParser.dataType.WIND, wind)
+            self.addValues(RMParser.dataType.CONDITION, condition)
+
+        except:
+            log.error("Failed to get simple forecast")
 
 
     def __getSolarRadiation(self):

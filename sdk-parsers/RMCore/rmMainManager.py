@@ -16,7 +16,6 @@ from RMUtilsFramework.rmUtils import RMSingleton
 from RMUtilsFramework.rmLogging import log
 from RMUtilsFramework.rmThreadWatcher import RMThreadWatcher
 from RMUtilsFramework.rmCommandThread import RMCommand
-from RMUtilsFramework.rmDiagUpload import RMDiagUpload
 
 class RMMainManager:
     __metaclass__ = RMSingleton
@@ -68,9 +67,6 @@ class RMMainManager:
 
         globalSettings.setDatabase(globalDbManager.settingsDatabase)
         globalSettings.loadSettings()
-
-        globalSettings.auth.setDatabases(globalDbManager.settingsDatabase)
-        globalSettings.auth.load()
 
         globalSettings.parseSysArguments(False) # Force usage of command line arguments, if they are present.
 

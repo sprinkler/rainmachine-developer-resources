@@ -92,9 +92,9 @@ class RMAPIClientREST(object):
         try:
             log.info("REST: %s : %s" % (req.get_method(), req.get_full_url()))
             if self.context is not None:
-                r = urllib2.urlopen(req, context=self.context)
+                r = urllib2.urlopen(req, context=self.context, timeout=5)
             else:
-                r = urllib2.urlopen(req)
+                r = urllib2.urlopen(req, timeout=5)
             data = r.read()
         except Exception, e:
             log.error("Cannot OPEN URL: %s" % e)
@@ -108,7 +108,7 @@ class RMAPIClientREST(object):
                 log.info("Cannot convert reply to JSON.")
                 return RMAPIClientErrors.JSON
 
-        return  data
+        return data
 
     def __getApiVer(self):
         data = self.__rest("GET", "apiVer")
@@ -149,7 +149,9 @@ class RMAPIClientREST(object):
         if value is not None:
             self._apiversion = value
             self._majorversion, self._minorversion, self._patchversion = self._apiversion.split(".")
+        else:
+            self._majorversion = "4" # Fallback if initial connection fails allow subsequent connection to work
 
 if __name__ == "__main__":
     assert RMAPIClientREST("127.2.0.1", "8180").apiversion is None
-    assert RMAPIClientREST("127.0.0.1", "8080").apiversion == "4.2.0"
+    assert RMAPIClientREST("127.0.0.1", "8080").apiversion == "4.5.0"

@@ -37,6 +37,7 @@ class Netatmo(RMParser):
     authReq = baseURL + "oauth2/token"
     getUserReq = baseURL + "api/getuser"
     deviceListReq = baseURL + "api/getstationsdata"
+    getMeasureUrl = baseURL + "api/getmeasure"
 
     accessTokenExpiration = 0
     accessToken = None
@@ -54,11 +55,11 @@ class Netatmo(RMParser):
             self.password = self.params["password"]
 
         if self.password is None or self.username is None:
-            log.info("Cannot login: no username or password provided")
-            self.lastKnownError = "Error: Invalid username or password"
+            self.lastKnownError = "Error: Invalid username or password."
+            log.error(self.lastKnownError)
             return
 
-        if self.username is not self.params["username"]:
+        if self.username != self.params["username"]:
             self.username = self.params["username"]
             self.password = self.params["password"]
             self.clientOauth()
@@ -69,8 +70,8 @@ class Netatmo(RMParser):
             self.renewAccesTokenIfNeeded()
 
         if self.accessToken is None:
-            log.info("Cannot login: invalid oauth")
-            self.lastKnownError = "Error: Invalid username or password"
+            self.lastKnownError = "Error: Cannot retrieve OAuth token."
+            log.error(self.lastKnownError)
             return
 
         self.getData()
@@ -83,89 +84,109 @@ class Netatmo(RMParser):
             specifiedModules = modulesString.split(',')
             specifiedModules = [item.strip() for item in specifiedModules]
 
-        for device in self.jsonData["body"]["devices"][0:1]:
-            name = device["station_name"] #put as output parameter?
-            [llat, llon] = device["place"]["location"] #use for max distance
-            modules = device["modules"]
-            rh = 0
-            temp = 0
-            maxTemp = 0
-            minTemp = 0
-            rain = 0
-            wind = 0
-            tsTemp = None
-            tsWind = None
-            tsRain = None
-            idxTemp = 0
-            idxWind = 0
-            idxRain = 0
-            self.params["_availableModules"] = []
-            for module in modules:
-                moduleName = 'unnamed'
-                try:
-                    moduleName = module["module_name"]
-                except:
-                    pass
-                moduleID = module["_id"]
-                self.params["_availableModules"].append([moduleName , moduleID] )
-                moduleDataType = module["data_type"]
 
-                if self.params["useSpecifiedModules"]:
-                    if moduleID not  in specifiedModules:
-                        continue
-                elif "outdoor" not in moduleName.lower() and ("Rain" not in moduleDataType) and ("Wind" not in moduleDataType):
+        # Only use the first reported device which should be user device, others are devices owned by other users
+        # and shared with current user
+        if len(self.jsonData["body"]["devices"]) == 0:
+             self.lastKnownError = "No NetAtmo devices found"
+             log.error(self.lastKnownError)
+             return
+
+        device = self.jsonData["body"]["devices"][0]
+
+        name = device["station_name"] #put as output parameter?
+        [llat, llon] = device["place"]["location"] #use for max distance
+        deviceID = device["_id"]
+        modules = device["modules"]
+        minRH = 0
+        maxRH = 0
+        # minPress = 0
+        # maxPress = 0
+        maxTemp = 0
+        minTemp = 0
+        rain = 0
+        wind = 0
+        tsTemp = None
+        tsWind = None
+        tsRain = None
+        idxTemp = 0
+        idxRH = 0
+        # idxPress = 0
+        idxWind = 0
+        idxRain = 0
+        self.params["_availableModules"] = []
+        for module in modules:
+            moduleName = 'unnamed'
+            try:
+                moduleName = module["module_name"]
+            except:
+                pass
+            moduleID = module["_id"]
+            self.params["_availableModules"].append([moduleName , moduleID] )
+            moduleDataType = module["data_type"]
+
+            if self.params["useSpecifiedModules"]:
+                if moduleID not in specifiedModules:
                     continue
+            elif "outdoor" not in moduleName.lower() and ("Rain" not in moduleDataType) and ("Wind" not in moduleDataType):
+                continue
+
+            if "Rain" in moduleDataType:
                 try:
-                    recordedRain = self.__toFloat(module["dashboard_data"]["Rain"]) #measured in C
-                    tsRecordedRain = self.__toInt(module["dashboard_data"]["time_utc"])
-                    if tsRecordedRain < tsStartOfDayUTC:
-                        continue
-                    tsRain = max(tsRecordedRain, tsRain)
+                    rainJson = self.getMeasure(moduleID, deviceID, "sum_rain")
+                    recordedRain = self.__toFloat(rainJson["body"][0]["value"][0][0])
+                    tsRain = self.__toInt(rainJson["body"][0]["beg_time"])
                     rain += recordedRain
                     idxRain+=1
-                except:
-                    pass
+                except Exception, e:
+                    log.error("Error reading rain gauge module: %s" % e)
+
+            if "Wind" in moduleDataType:
                 try:
-                    recordedWind = self.__toFloat(module["dashboard_data"]["WindStrength"])
-                    tsRecordedWind = self.__toInt(module["dashboard_data"]["time_utc"])
-                    if tsRecordedWind < tsStartOfDayUTC:
-                        continue
-                    tsWind = max(recordedWind, tsWind)
-                    wind += recordedWind
+                    windJson = self.getMeasure(moduleID, deviceID, "WindStrength")
+                    recorderWind = self.__toFloat(windJson["body"][0]["value"][0][0])
+                    tsWind = self.__toInt(windJson["body"][0]["beg_time"])
+                    wind += recorderWind
                     idxWind+=1
-                except:
-                    pass
+                except Exception, e:
+                    log.error("Error reading wind module: %s" % e)
+
+            if "Temperature" in moduleDataType:
                 try:
-                    recordedTemp = self.__toFloat(module["dashboard_data"]["Temperature"])
-                    tsRecordedTemp = self.__toInt(module["dashboard_data"]["time_utc"])
+                    tempJson = self.getMeasure(moduleID, deviceID, "min_temp,max_temp,min_hum,max_hum,min_pressure,max_pressure")
+                    [recordedMinTemp, recordedMaxTemp, recordedMinRH, recordedMaxRH, recordedMinPress, recordedMaxPress] = self.__toFloat(tempJson["body"][0]["value"][0])
+                    tsTemp = self.__toInt(tempJson["body"][0]["beg_time"])
+                    if(recordedMaxTemp is not None and recordedMinTemp is not None):
+                        maxTemp += recordedMaxTemp
+                        minTemp += recordedMinTemp
+                        idxTemp += 1
+                    if(recordedMinRH is not None and recordedMaxRH is not None):
+                        maxRH += recordedMaxRH
+                        minRH += recordedMinRH
+                        idxRH += 1
+                    # if(recordedMaxPress is not None and recordedMinPress is not None):
+                    #     maxPress += recordedMaxPress
+                    #     minPress += recordedMinPress
+                    #     idxPress += 1
+                except Exception, e:
+                    log.error("Error reading temperature module: %s" % e)
 
-                    if tsRecordedTemp < tsStartOfDayUTC :
-                        continue
+        if idxTemp > 0 and tsTemp is not None:
+            self.addValue(RMParser.dataType.MINTEMP, tsTemp, minTemp/idxTemp)
+            self.addValue(RMParser.dataType.MAXTEMP, tsTemp, maxTemp/idxTemp)
 
-                    tsTemp = max(tsRecordedTemp, tsTemp)
-                    maxTemp += self.__toFloat(module["dashboard_data"]["max_temp"])
-                    minTemp += self.__toFloat(module["dashboard_data"]["min_temp"])
-                    rh += self.__toFloat(module["dashboard_data"]["Humidity"]) #measured in %
-                    temp += recordedTemp
+        if idxRH > 0 and tsTemp is not None:
+            self.addValue(RMParser.dataType.MAXRH, tsTemp, maxRH/idxRH)
+            self.addValue(RMParser.dataType.MINRH, tsTemp, minRH/idxRH)
 
-                    idxTemp+=1
-                except:
-                    pass
+        # if idxPress > 0 and tsTemp is not None:
+        #     self.addValue(RMParser.dataType.PRESSURE, tsTemp, (maxPress + minPress)/(2*idxRH))
 
-            if idxTemp > 0 and tsTemp > tsStartOfDayUTC:
-                self.addValue(RMParser.dataType.TEMPERATURE, tsStartOfDayUTC, temp/idxTemp)
-                self.addValue(RMParser.dataType.MINTEMP, tsStartOfDayUTC, minTemp/idxTemp)
-                self.addValue(RMParser.dataType.MAXTEMP, tsStartOfDayUTC, maxTemp/idxTemp)
-                self.addValue(RMParser.dataType.RH, tsStartOfDayUTC, rh/idxTemp)
-            if idxWind > 0 and tsWind > tsStartOfDayUTC:
-                self.addValue(RMParser.dataType.WIND, tsStartOfDayUTC, wind/idxWind)
-            if idxRain > 0 and tsRain > tsStartOfDayUTC:
-                self.addValue(RMParser.dataType.RAIN, tsStartOfDayUTC, rain/idxRain)
+        if idxWind and tsWind is not None:
+            self.addValue(RMParser.dataType.WIND, tsWind, wind/idxWind)
+        if idxRain > 0 and tsRain is not None:
+            self.addValue(RMParser.dataType.RAIN, tsRain, rain/idxRain)
 
-        for parserCfg in RMParserManager.instance.parsers:
-            if self.parserName is parserCfg.name:
-                RMParserManager.instance.setParserParams(parserCfg.dbID, self.params)
-                break
 
     def renewAccesTokenIfNeeded(self):
         try:
@@ -181,7 +202,7 @@ class Netatmo(RMParser):
                 self.refreshToken = response['refresh_token']
                 self.accessTokenExpiration = int(response['expire_in']) + time.time()
         except:
-            log.debug("Failed to refresh token")
+            log.error("Failed to refresh token")
 
     def clientOauth(self):
         postParams = {
@@ -198,7 +219,7 @@ class Netatmo(RMParser):
             self.refreshToken = resp['refresh_token']
             self.accessTokenExpiration = int(resp['expire_in']) + time.time()
         except:
-            log.debug("Failed to get oauth token")
+            log.error("Failed to get oauth token")
 
     def getData(self):
         postParams = {
@@ -206,34 +227,52 @@ class Netatmo(RMParser):
             }
         self.jsonData = self.postRequest(self.deviceListReq, postParams)
 
+    def getMeasure(self, moduleID, deviceID, measure):
+        postParams = {
+            "access_token" : self.accessToken,
+            "module_id" : moduleID,
+            "device_id" :deviceID,
+            "scale" : "1day",
+            "type" : measure,
+            "date_begin" : rmCurrentDayTimestamp() - 24*3600,
+            "date_end" : rmCurrentDayTimestamp() - 1,
+            "real_time" : True
+        }
+        jsonData = self.postRequest(self.getMeasureUrl, postParams)
+        return jsonData
 
     def postRequest(self, url, params):
         params = urlencode(params)
         headers = {"Content-Type" : "application/x-www-form-urlencoded;charset=utf-8"}
         req = urllib2.Request(url=url, data=params, headers=headers)
-        resp = None
 
         try:
-            resp = urllib2.urlopen(req).read()
+            response = urllib2.urlopen(req)
+            log.debug("%s?%s" % (response.geturl(), params))
+            return json.loads(response.read())
         except urllib2.URLError, e:
             log.debug(e)
             if hasattr(ssl, '_create_unverified_context'): #for mac os only in order to ignore invalid certificates
                 try:
                     context = ssl._create_unverified_context()
-                    resp = urllib2.urlopen(req, context=context).read()
+                    response = urllib2.urlopen(req, context=context)
+                    return json.loads(response.read())
                 except Exception, e:
                     log.exception(e)
-                    return None
-            else:
-                return None
+        return None
 
-        return json.loads(resp)
 
     def __toFloat(self, value):
         try:
             if value is None:
                 return value
-            return float(value)
+            if isinstance(value,list):
+                out = []
+                for iterVal in value:
+                    out.append(self.__toFloat(iterVal))
+                return out
+            else:
+                return float(value)
         except:
             return None
 
@@ -244,6 +283,3 @@ class Netatmo(RMParser):
             return int(value)
         except:
             return None
-
-#aa = Netatmo()
-#aa.perform()

@@ -20,12 +20,12 @@ class FAWN(RMParser):
     parserHistorical = True
     parserEnabled = False
     parserDebug = True
-    parserInterval = 3600
+    parserInterval = 6 * 3600
     params = {"station": 480, "useHourly": False}
 
     def isEnabledForLocation(self, timezone, lat, long):
         if FAWN.parserEnabled and timezone:
-            return timezone.startswith("Europe")
+            return timezone.startswith("US") or timezone.startswith("America")
         return False
 
     def perform(self):

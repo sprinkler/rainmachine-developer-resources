@@ -10,21 +10,21 @@ var API = APISync;
 
 function _API(async) {
 
-var host = window.location.hostname;
-//var host = "private-bd9e-rainmachine.apiary-mock.com";
+//var host = window.location.hostname;
 //var host = "127.0.0.1";
-//var host = "5.2.191.144";
+//var host = "192.168.12.174";             //Example: A local networked RainMachine
+var host = "demo.labs.rainmachine.com";  //Example: API Mock server
 
-var port = window.location.port;
-//var port = "443";
-//var port = "18080";
-//var port = "8888";
-
+//var port = window.location.port;
+var port = "18080";  //Example: Port for localhost connection on RainMachine
+//var port = "8080";   //Example: Port for local network connection to a RainMachine
+//var port = "19090";  //Example: Port for demo.labs.rainmachine.com mock server
 
 //var protocol = window.location.protocol;
 
 var apiUrl = "https://" + host + ":" + port + "/api/4";
 //var apiUrl = "http://" + host + ":" + port + "/api/4";
+
 
 var token = null;
 var async = async;
@@ -49,12 +49,12 @@ function rest(type, apiCall, data, isBinary, extraHeaders)
 					//console.info("REST ASYNC: SUCCESS  %s reply: %o", url, r);
 					a.resolve(JSON.parse(r.responseText));
 				} else {
-					console.error("REST ASYNC: FAIL reply for %s, ready: %s, status: %s", url, r.readyState, r.status);
 					a.reject(r.status);
+					console.log("REST ASYNC: FAIL reply for %s, ready: %s, status: %s", url, r.readyState, r.status);
 				}
 			}
 		};
-	};
+	}
 
 	try {
 		r.open(type, url, async);
@@ -77,14 +77,24 @@ function rest(type, apiCall, data, isBinary, extraHeaders)
 			r.send();
 		}
 
-		if (async)
+		//console.log("REST STATUS: %s : %s", r.readyState, r.status);
+
+		if (async) {
 			return a;
-		else
-			return JSON.parse(r.responseText);
+		} else {
+			if (r.readyState === 4 && r.status === 200) {
+				return JSON.parse(r.responseText);
+			}
+		}
 
-	} catch(e) { console.log(e);}
+	} catch(e) {
+		console.log("REST: Exception: %s", e);
+		if (async) {
+			a.reject(e);
+		}
+	}
 
-	console.log("REST: NULL return");
+	console.log("REST: Error !");
 	return null;
 }
 
@@ -145,12 +155,18 @@ _API.prototype.auth = function(password, remember)
 		pwd: password,
 		remember: remember
 	};
-	
-	var reply = this.post(url, data, null);
-	console.log(JSON.stringify(reply, null, "  "));
 
-	var token = reply.access_token;
-	this.setAccessToken(token);
+	var reply = this.post(url, data, null);
+	var token = null;
+
+	console.log(JSON.stringify(reply, null, "  "));
+	try {
+		token = reply.access_token;
+		this.setAccessToken(token);
+	} catch(e) {
+		console.log("Error authenticating !");
+	}
+
 	return token;
 };
 
@@ -541,7 +557,7 @@ _API.prototype.getParsers = function(id)
 {
 	var url = this.URL.parser;
 
-	if (id !== undefined)
+	if (id !== undefined && id !== null && id > 0)
 		url += "/" + id;
 
 	return this.get(url, null);
