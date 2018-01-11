@@ -8,3 +8,4 @@
 - sdk-parsers : Python scripts that are used by RainMachine to fetch the weather data from different weather information providers.
 - timezone: The time zone database used on RainMachine
 
+See README.md in each folder for a more information.
