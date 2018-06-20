@@ -7,16 +7,15 @@ from RMUtilsFramework.rmTimeUtils import rmTimestampFromDateAsString
 
 
 class ExampleParser(RMParser):
-    parserName = "DWD Parser"  # Your parser name
-    parserDescription = "Parser for the german \"Deutscher Wetterdienst\""  # A short description of your parser
-    parserForecast = True # True if parser provides future forecast data
-    parserHistorical = False # True if parser also provides historical data (only actual observed data)
-    parserInterval = 6 * 3600             # Your parser running interval in seconds, data will only be mixed in hourly intervals
+    parserName = "DWD Parser"
+    parserDescription = "Parser for the german \"Deutscher Wetterdienst\""
+    parserForecast = True
+    parserHistorical = False
+    parserInterval = 6 * 3600
     parserDebug = False
     params = {"station": None}
 
-    def perform(self):                # The function that will be executed must have this name
-
+    def perform(self):
         station = self.params.get("station", None)
         if station is None:
             log.debug("No station set, using Frankfurt am Main" % datestring)
@@ -28,11 +27,9 @@ class ExampleParser(RMParser):
         ]
 
         try:
-
             file = self.openURL(url, URLParams)
             if file is None:
                 return
-
             reader = csv.reader(file, delimiter=';')
             included_cols = [0, 1, 2, 3, 4, 5, 9, 14, 22, 31, 34]
             next(reader)
