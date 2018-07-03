@@ -111,6 +111,15 @@ class WeatherFlow(RMParser):
             self.addValue(RMParser.dataType.DEWPOINT, ts, self.hourlyData["Dewpoint"])
             log.info("dewpoint = %f" % self.hourlyData["Dewpoint"])
 
+        if "Temperature" in self.maxData:
+            self.addValue(RMParser.dataType.MAXTEMP, ts, self.maxData["Temperature"])
+        if "Temperature" in self.minData:
+            self.addValue(RMParser.dataType.MINTEMP, ts, self.minData["Temperature"])
+        if "Humidity" in self.maxData:
+            self.addValue(RMParser.dataType.MAXRH, ts, self.maxData["Humidity"])
+        if "Humidity" in self.minData:
+            self.addValue(RMParser.dataType.MINRH, ts, self.minData["Humidity"])
+
         # After parsing your data you can add it into a database automatically created for your parser with
         # self.addValue( VALUE TYPE, UNIX TIMESTAMP, VALUE)
         # Adding multiple values at once is possible with
