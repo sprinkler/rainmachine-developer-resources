@@ -43,6 +43,7 @@ class WeatherFlow(RMParser):
     minData = {}
     started = False
 
+    # Users must supply the sensor serial numbers
     params = {
         "Air S/N" : "<your Air S/N>",
         "Sky S/N" : "<your Sky S/N>"
@@ -60,33 +61,6 @@ class WeatherFlow(RMParser):
             self.started = True
             threading.Thread(target = self.wfUDPData).start()
 
-        # Accessing system location settings
-        #lat = self.settings.location.latitude
-
-        # Other location settings
-        #self.zip
-        #self.name
-        #self.state
-        #self.latitude
-        #self.longitude
-        #self.address
-        #self.elevation
-        #self.gmtOffset
-        #self.dstOffset
-        #self.stationID
-        #self.stationName
-        #self.et0Average
-
-        # downloading data from a URL convenience function since other python libraries can be used
-        # data = self.openURL(URL STRING, PARAMETER LIST)
-        # URL = "https://example.com/
-        # parameterList = [ ("parameter1", "value"),("parameter2", "value") ]
-
-        #wd = self.getData()
-
-        #print("Timestamp = ", wd["ts"])
-        # looks like the timestamp should be in local time, not UTC
-        #ts = time.localtime(time.time())
         ts = int(time.time())
 
         if "Temperature" in self.hourlyData:
@@ -120,30 +94,8 @@ class WeatherFlow(RMParser):
         if "Humidity" in self.minData:
             self.addValue(RMParser.dataType.MINRH, ts, self.minData["Humidity"])
 
-        # After parsing your data you can add it into a database automatically created for your parser with
-        # self.addValue( VALUE TYPE, UNIX TIMESTAMP, VALUE)
-        # Adding multiple values at once is possible with
-        # self.addValues( VALUE TYPE, LIST OF TUPLES [ (TIMESTAMP, VALUE), (TIMESTAMP, VALUE) ... ]
-        # Predefined VALUE TYPES
-        # RMParser.dataType.TEMPERATURE
-        # RMParser.dataType.MINTEMP
-        # RMParser.dataType.MAXTEMP
-        # RMParser.dataType.RH
-        # RMParser.dataType.WIND
-        # RMParser.dataType.SOLARRADIATION
-        # RMParser.dataType.SKYCOVER
-        # RMParser.dataType.RAIN
-        # RMParser.dataType.ET0
-        # RMParser.dataType.POP
-        # RMParser.dataType.QPF
-        # RMParser.dataType.CONDITION
-        # RMParser.dataType.PRESSURE
-        # RMParser.dataType.DEWPOINT
 
-
-        # For your own custom values you can use
-        # self.addUserValue( YOUR CUSTOM VALUE NAME, TIMESTAMP, VALUE)
-
+    # Listen for and process WeatherFlow data that is broadcast on UDP port 50222
     def wfUDPData(self):
         air_count = 0
         sky_count = 0
@@ -221,10 +173,6 @@ class WeatherFlow(RMParser):
                     self.maxData["Humidity"] = data["obs"][0][3]
                 if (data["obs"][0][3] < self.minData["Humidity"]):
                     self.minData["Humidity"] = data["obs"][0][3]
-
-                # Update main class array with average temp
-                #self.Temperature[tsHour] = temp_total / air_count
-                #print("Setting temp[%d] = %f" % (tsHour, temp_total/air_count))
 
             if (data["type"] == "obs_sky") and (data["serial_number"] == self.params["Sky S/N"]):
                 ts = data["obs"][0][0]
