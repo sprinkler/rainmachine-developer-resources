@@ -206,28 +206,6 @@ class WeatherFlow(RMParser):
         self.started = False
 
 
-    def __toFloat(self, value):
-        try:
-            if value is None:
-                return value
-            if isinstance(value,list):
-                out = []
-                for iterVal in value:
-                    out.append(self.__toFloat(iterVal))
-                return out
-            else:
-                return float(value)
-        except:
-            return None
-
-    def __toInt(self, value):
-        try:
-            if value is None:
-                return value
-            return int(value)
-        except:
-            return None
-
 # To run in pycharm uncomment the following lines
 #if __name__ == "__main__":
 #    p = WeatherFlow()
