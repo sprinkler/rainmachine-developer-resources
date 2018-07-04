@@ -20,6 +20,17 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+# WeatherFlow Smart Weather Station data parser.
+#
+# Run a thread in the background that listens for the WeatherFlow hub data
+# broadcasts and collect the relevant data. The hub does a UDP broadcast
+# for each sensor.  The body of the boardcast contains JSON formatted data
+# from the sensor.
+#
+# Each sensor has a unique serial number. Multiple sensors are allowed and
+# this parser must be configured with the specific sensors to track. Only
+# one Air and one Sky may be tracked.
+
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
 
