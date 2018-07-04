@@ -201,6 +201,9 @@ class WeatherFlow(RMParser):
                 rain_total += data["obs"][0][3]
                 self.hourlyData["Rain"] = rain_total
 
+        log.info("Receive thread exiting")
+        s.close()
+        self.started = False
 
 
     def __toFloat(self, value):
