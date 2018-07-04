@@ -34,10 +34,9 @@ class WeatherFlow(RMParser):
     #parserInterval = 6 * 3600             # Your parser running interval in seconds, data will only be mixed in hourly intervals
     #parserInterval = 1800             # Your parser running interval in seconds, data will only be mixed in hourly intervals
     parserInterval = 300             # Your parser running interval in seconds, data will only be mixed in hourly intervals
-    parserDebug = False
-    result = {}
-    runtime = {}
-    Temperature = {}
+    #parserDebug = False
+    parserDebug = True
+    parserEnabled = True
     hourlyData = {}
     maxData = {}
     minData = {}
@@ -148,7 +147,6 @@ class WeatherFlow(RMParser):
 
                 prev_air_day = int(ts / (3600 * 24))
                 prev_air_hour = int(ts / 3600)
-                tsHour = ts - ts % 3600
                 air_count += 1
 
                 temp_total += data["obs"][0][2]
@@ -190,7 +188,6 @@ class WeatherFlow(RMParser):
                     rain_total = 0
 
                 prev_sky_hour = int(ts / 3600)
-                tsHour = ts - ts % 3600
                 sky_count += 1
 
                 wind_total += data["obs"][0][5]
