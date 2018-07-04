@@ -71,7 +71,7 @@ class WeatherFlow(RMParser):
 
         if self.started == False:
             self.started = True
-            log.info("Starting UPD Listener thread.")
+            log.debug("Starting UPD Listener thread.")
             # TODO: How do we stop the thread once it's started?
             threading.Thread(target = self.wfUDPData).start()
             return  None # First time, just start the thread, we have no data yet.
@@ -80,25 +80,25 @@ class WeatherFlow(RMParser):
 
         if "Temperature" in self.hourlyData:
             self.addValue(RMParser.dataType.TEMPERATURE, ts, self.hourlyData["Temperature"])
-            log.info("temperature = %f" % self.hourlyData["Temperature"])
+            log.debug("temperature = %f" % self.hourlyData["Temperature"])
         if "Humidity" in self.hourlyData:
             self.addValue(RMParser.dataType.RH, ts, self.hourlyData["Humidity"])
-            log.info("humidity = %f" % self.hourlyData["Humidity"])
+            log.debug("humidity = %f" % self.hourlyData["Humidity"])
         if "Pressure" in self.hourlyData:
             self.addValue(RMParser.dataType.PRESSURE, ts, self.hourlyData["Pressure"])
-            log.info("pressure = %f" % self.hourlyData["Pressure"])
+            log.debug("pressure = %f" % self.hourlyData["Pressure"])
         if "Wind" in self.hourlyData:
             self.addValue(RMParser.dataType.WIND, ts, self.hourlyData["Wind"])
-            log.info("wind speed = %f" % self.hourlyData["Wind"])
+            log.debug("wind speed = %f" % self.hourlyData["Wind"])
         if "SolarRadiation" in self.hourlyData:
             self.addValue(RMParser.dataType.SOLARRADIATION, ts, self.hourlyData["SolarRadiation"])
-            log.info("solar radiation = %f" % self.hourlyData["SolarRadiation"])
+            log.debug("solar radiation = %f" % self.hourlyData["SolarRadiation"])
         if "Rain" in self.hourlyData:
             self.addValue(RMParser.dataType.RAIN, ts, self.hourlyData["Rain"])
-            log.info("rain = %f" % self.hourlyData["Rain"])
+            log.debug("rain = %f" % self.hourlyData["Rain"])
         if "Dewpoint" in self.hourlyData:
             self.addValue(RMParser.dataType.DEWPOINT, ts, self.hourlyData["Dewpoint"])
-            log.info("dewpoint = %f" % self.hourlyData["Dewpoint"])
+            log.debug("dewpoint = %f" % self.hourlyData["Dewpoint"])
 
         if "Temperature" in self.maxData:
             self.addValue(RMParser.dataType.MAXTEMP, ts, self.maxData["Temperature"])
@@ -127,7 +127,7 @@ class WeatherFlow(RMParser):
         bufferSize = 1024 # whatever you need
         port = 50222
 
-        log.info("Start listening on port %d" % port)
+        log.debug("Start listening on port %d" % port)
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -135,7 +135,7 @@ class WeatherFlow(RMParser):
         except:
             log.Error("Socket failure")
 
-        log.info("Start recieve loop")
+        log.debug("Start recieve loop")
         while self.started:
             hub = s.recvfrom(bufferSize)
             data = json.loads(hub[0]) # hub is a truple (json, ip, port)
@@ -152,7 +152,7 @@ class WeatherFlow(RMParser):
                     dewp_total = 0
 
                 if int(ts / (3600 * 24)) != prev_air_day:
-                    log.info("New Day! %d vs %d" % ((ts / (3600 * 24)), prev_air_day))
+                    log.debug("New Day! %d vs %d" % ((ts / (3600 * 24)), prev_air_day))
                     self.maxData["Temperature"] = -100
                     self.minData["Temperature"] = 100
                     self.maxData["Humidity"] = 0
@@ -212,7 +212,7 @@ class WeatherFlow(RMParser):
                 rain_total += data["obs"][0][3]
                 self.hourlyData["Rain"] = rain_total
 
-        log.info("Receive thread exiting")
+        log.debug("Receive thread exiting")
         s.close()
         self.started = False
 
