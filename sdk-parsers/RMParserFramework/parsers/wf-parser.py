@@ -52,17 +52,18 @@ class WeatherFlow(RMParser):
         "SkySerialNumber": None
     }
 
-    # Daily Min/Max initialization
-    maxData["Temperature"] = -100
-    minData["Temperature"] = 100
-    maxData["Humidity"] = 0
-    minData["Humidity"] = 100
+    def __init__(self):
+        RMParser.__init__(self)
+        self.started = False
 
     def perform(self):                # The function that will be executed must have this name
 
         if self.started == False:
             self.started = True
+            log.info("Starting UPD Listener thread.")
+            # TODO: How do we stop the thread once it's started?
             threading.Thread(target = self.wfUDPData).start()
+            return  None # First time, just start the thread, we have no data yet.
 
         ts = int(time.time())
 
@@ -115,6 +116,7 @@ class WeatherFlow(RMParser):
         bufferSize = 1024 # whatever you need
         port = 50222
 
+        log.info("Start listening on port %d" % port)
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -122,8 +124,8 @@ class WeatherFlow(RMParser):
         except:
             log.Error("Socket failure")
 
-        log.info("starting loop")
-        while True:
+        log.info("Start recieve loop")
+        while self.started:
             hub = s.recvfrom(bufferSize)
             data = json.loads(hub[0]) # hub is a truple (json, ip, port)
 
