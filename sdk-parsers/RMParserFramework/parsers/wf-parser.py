@@ -218,10 +218,10 @@ class WeatherFlow(RMParser):
 
 
 # To run in pycharm uncomment the following lines
-#if __name__ == "__main__":
-#    p = WeatherFlow()
-#    p.params["Air S/N"] = "ACUAIR-2058"
-#    p.params["Sky S/N"] = "ACUSKY-2058"
-#    while True:
-#        p.perform()
-#        time.sleep(120)
+if __name__ == "__main__":
+    p = WeatherFlow()
+    p.params["AirSerialNumber"] = "ACUAIR-2058"
+    p.params["SkySerialNumber"] = "ACUSKY-2058"
+    while True:
+        p.perform()
+        time.sleep(120)
