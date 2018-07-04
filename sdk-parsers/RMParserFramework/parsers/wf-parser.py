@@ -45,8 +45,12 @@ class WeatherFlow(RMParser):
 
     # Users must supply the sensor serial numbers
     params = {
-        "Air S/N" : "<your Air S/N>",
-        "Sky S/N" : "<your Sky S/N>"
+        "AirSerialNumber": None,
+        "SkySerialNumber": None
+    }
+    defaultParams = {
+        "AirSerialNumber": None,
+        "SkySerialNumber": None
     }
 
     # Daily Min/Max initialization
@@ -125,7 +129,8 @@ class WeatherFlow(RMParser):
             data = json.loads(hub[0]) # hub is a truple (json, ip, port)
 
             #print("type = %s s/n = %s" % (data["type"], data["serial_number"]))
-            if (data["type"] == "obs_air") and (data["serial_number"] == self.params["Air S/N"]):
+
+            if (data["type"] == "obs_air") and (data["serial_number"] == self.params["AirSerialNumber"]):
                 ts = data["obs"][0][0]
                 if int(ts / 3600) != prev_air_hour:
                     air_count = 0
@@ -166,15 +171,17 @@ class WeatherFlow(RMParser):
                 # Track Min/Max
                 if (data["obs"][0][2] > self.maxData["Temperature"]):
                     self.maxData["Temperature"] = data["obs"][0][2]
+
                 if (data["obs"][0][2] < self.minData["Temperature"]):
                     self.minData["Temperature"] = data["obs"][0][2]
 
                 if (data["obs"][0][3] > self.maxData["Humidity"]):
                     self.maxData["Humidity"] = data["obs"][0][3]
+
                 if (data["obs"][0][3] < self.minData["Humidity"]):
                     self.minData["Humidity"] = data["obs"][0][3]
 
-            if (data["type"] == "obs_sky") and (data["serial_number"] == self.params["Sky S/N"]):
+            if (data["type"] == "obs_sky") and (data["serial_number"] == self.params["SkySerialNumber"]):
                 ts = data["obs"][0][0]
                 if int(ts / 3600) != prev_sky_hour:
                     sky_count = 0
