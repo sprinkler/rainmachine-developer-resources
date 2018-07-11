@@ -1,4 +1,21 @@
+# DWD parser for rainmachine
+# Copyright (C) 2018  Sebastian Kuhn
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 # coding=utf-8
+
 from RMParserFramework.rmParser import RMParser  # Mandatory include for parser definition
 from RMUtilsFramework.rmLogging import log       # Optional include for logging
 
@@ -8,16 +25,15 @@ from RMUtilsFramework.rmTimeUtils import rmTimestampFromDateAsString
 
 
 class ExampleParser(RMParser):
-    parserName = "DWD Parser"  # Your parser name
-    parserDescription = "Parser for the german \"Deutscher Wetterdienst\""  # A short description of your parser
-    parserForecast = True # True if parser provides future forecast data
-    parserHistorical = False # True if parser also provides historical data (only actual observed data)
-    parserInterval = 6 * 3600             # Your parser running interval in seconds, data will only be mixed in hourly intervals
+    parserName = "DWD Parser"
+    parserDescription = "Parser for the german \"Deutscher Wetterdienst\""
+    parserForecast = True
+    parserHistorical = False
+    parserInterval = 6 * 3600
     parserDebug = False
     params = {"station": None}
 
-    def perform(self):                # The function that will be executed must have this name
-
+    def perform(self):
         station = self.params.get("station", None)
         if station is None:
             log.debug("No station set, using Frankfurt am Main" % datestring)
@@ -41,6 +57,7 @@ class ExampleParser(RMParser):
             next(reader)
             for row in reader:
                 content = list(row[i] for i in included_cols)
+                #print(content)
                 datestring = content[0]+':'+content[1]
                 timestamp = rmTimestampFromDateAsString(datestring, '%d.%m.%y:%H:%M')
                 if timestamp is None:
@@ -73,7 +90,6 @@ class ExampleParser(RMParser):
                 # Solar radiation kJ/m² => MJ/m²
                 if content[10] != '---':
                     self.addValue(RMParser.dataType.SOLARRADIATION, timestamp, float(content[10].replace(",", ".")))
-
 
         except Exception, e:
             log.error("*** Error running DWD parser")
