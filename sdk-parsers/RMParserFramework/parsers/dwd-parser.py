@@ -36,7 +36,7 @@ class ExampleParser(RMParser):
     def perform(self):
         station = self.params.get("station", None)
         if station is None:
-            log.debug("No station set, using Frankfurt am Main" % datestring)
+            log.debug("No station set, using Frankfurt am Main")
             station = 10637
         url = "http://opendata.dwd.de/weather/local_forecasts/poi/" + str(station) + "-MOSMIX.csv"
 
