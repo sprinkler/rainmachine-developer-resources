@@ -89,7 +89,7 @@ class ExampleParser(RMParser):
 
                 # Solar radiation kJ/m² => MJ/m²
                 if content[10] != '---':
-                    self.addValue(RMParser.dataType.SOLARRADIATION, timestamp, float(content[10].replace(",", ".")))
+                    self.addValue(RMParser.dataType.SOLARRADIATION, timestamp, float(content[10].replace(",", "."))/10)
 
         except Exception, e:
             log.error("*** Error running DWD parser")
