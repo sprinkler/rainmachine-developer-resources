@@ -168,7 +168,8 @@ class WeatherFlow(RMParser):
                 humd_total += data["obs"][0][3]
                 self.hourlyData["Humidity"] = float(humd_total) / float(air_count)
 
-                pres_total += data["obs"][0][1]
+                # report pressure in hpa so convert from mb to hpa
+                pres_total += (data["obs"][0][1] / 10.0)
                 self.hourlyData["Pressure"] = float(pres_total) / float(air_count)
 
                 # Calculate dewpoint
