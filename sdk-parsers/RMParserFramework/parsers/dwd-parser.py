@@ -82,8 +82,11 @@ class DWD(RMParser):
 
                 if content[9] != '---':
                     self.addValue(RMParser.dataType.PRESSURE, timestamp, float(content[9].replace(",", "."))/10)
-                if content[10] != '---':
-                    self.addValue(RMParser.dataType.SOLARRADIATION, timestamp, float(content[10].replace(",", ".")))
+
+                #if content[10] != '---':
+                #    self.addValue(RMParser.dataType.SOLARRADIATION, timestamp, float(content[10].replace(",", ".")))
+
+                #log.info(self.result)
 
         except Exception, e:
             log.error("*** Error running DWD parser")
