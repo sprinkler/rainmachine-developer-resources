@@ -95,3 +95,8 @@ This data can be browsed with a sqlite browser: http://sqlitebrowser.org/ by vie
    Press the Run button to execute the project. After initial setup all enabled parsers will be run every minute.
 This behavior can be changed by removing **forceRunParser = True** from the rmParserManager.py line 84.
 Removing this flag parsers will be executed by their parserInterval defined for each parser, which is how they are run on device.
+
+# Further reading
+
+https://support.rainmachine.com/hc/en-us/articles/228620727-How-to-integrate-RainMachine-with-different-weather-forecast-services
+
