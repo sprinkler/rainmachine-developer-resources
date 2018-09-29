@@ -111,7 +111,7 @@ class WifiLogger(RMParser):
 
         # PRESSURE = "PRESSURE"  # [kilo Pa atmospheric pressure]
         # 1 inch = 3.3864 kpa
-        barInch = dewF = float(current_weather_data["bar"])
+        barInch = float(current_weather_data["bar"])
         log.debug("barInch: %s" % (barInch))
 
         PRESSURE = barInch * 3.3864
