@@ -175,6 +175,6 @@ class WifiLogger(RMParser):
             log.debug("Current Condition Heavy Rain")
 
 # uncomment for testing
-if __name__ == "__main__":
-    p = WifiLogger()
-    p.perform()
+#if __name__ == "__main__":
+#    p = WifiLogger()
+#    p.perform()

@@ -143,6 +143,6 @@ class Weatherlink(RMParser):
             log.debug("Current Condition Heavy Rain")
 
 # uncomment for testing
-if __name__ == "__main__":
-    p = Weatherlink()
-    p.perform()
+#if __name__ == "__main__":
+#    p = Weatherlink()
+#    p.perform()
