@@ -107,7 +107,6 @@ class WifiLogger(RMParser):
         # ET0 = "ET0"  # [mm]
         # POP = "POP"  # [percent]
         # QPF = "QPF"  # [mm] -
-        # CONDITION = "CONDITION"  # [string]
 
         # PRESSURE = "PRESSURE"  # [kilo Pa atmospheric pressure]
         # 1 inch = 3.3864 kpa
@@ -126,6 +125,11 @@ class WifiLogger(RMParser):
         log.debug("DEWPOINT: %s" % (DEWPOINT))
         self.addValue(RMParser.dataType.DEWPOINT, timestamp, DEWPOINT)
 
+        RAINRATE = float(current_weather_data["rainr"])
+        log.debug("RAINRATE: %s" % (RAINRATE))
+
+        # CONDITION = "CONDITION"  # [string]
+        #
         # current conditions ... from Davis
         # Forecast Icon Values
         #
@@ -156,11 +160,21 @@ class WifiLogger(RMParser):
             self.addValue(RMParser.dataType.CONDITION, timestamp, RMParser.conditionType.MostlyCloudy)
             log.debug("Current Condition Mostly Cloudy")
 
-        elif currentConditionValue == 0:
+
+        # here lets check rain rate
+        if (0 < RAINRATE <= 0.098):
             self.addValue(RMParser.dataType.CONDITION, timestamp, RMParser.conditionType.LightRain)
             log.debug("Current Condition Light Rain")
 
+        elif (0.098 < RAINRATE <= 0.39):
+            self.addValue(RMParser.dataType.CONDITION, timestamp, RMParser.conditionType.RainShowers)
+            log.debug("Current Condition Rain Showers")
+
+        elif (RAINRATE > 0.39):
+            self.addValue(RMParser.dataType.CONDITION, timestamp, RMParser.conditionType.HeavyRain)
+            log.debug("Current Condition Heavy Rain")
+
 # uncomment for testing
-#if __name__ == "__main__":
-#    p = WifiLogger()
-#    p.perform()
+if __name__ == "__main__":
+    p = WifiLogger()
+    p.perform()
