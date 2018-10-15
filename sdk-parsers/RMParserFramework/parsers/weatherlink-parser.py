@@ -9,12 +9,14 @@ from RMParserFramework.rmParser import RMParser  # Mandatory include for parser 
 from RMUtilsFramework.rmLogging import log       # Optional include for logging
 from RMUtilsFramework.rmTimeUtils import *
 import json
+import rfc822
 
 
-class WifiLogger(RMParser):
-    parserName = "WifiLogger Parser"
-    parserDescription = "WifiLogger Parser"
-    parserInterval = 600  # delay between runs in seconds
+
+class Weatherlink(RMParser):
+    parserName = "Weatherlink Parser"
+    parserDescription = "Davis Weatherlink Parser"
+    parserInterval = 3600  # delay between runs in seconds
     parserForecast = False
     parserHistorical = True
     parserEnabled = True
@@ -24,68 +26,69 @@ class WifiLogger(RMParser):
         return (tempF - 32) * 5/9
 
     def perform(self):
+        # https://www.weatherlink.com/static/docs/APIdocumentation.pdf
+        # add URL with DID / PWD / Token
+        # this can easily be put in the UI and passed to parser...
 
-        # add URL FOR WiFiLogger connected to Davis Console...
-        url = "http://10.123.1.120/wflexp.json"
+      #  https: // api.weatherlink.com / v1 / NoaaExt.json?user = DID & pass=ownerPW & apiToken = tokenID
 
-        wifiLoggerData = self.openURL(url)
-        if wifiLoggerData is None:
+        url = "https://api.weatherlink.com/v1/NoaaExt.json?user=<DID>&pass=<ownerPW>&apiToken=<tokenID>"
+
+        weatherlinkData = self.openURL(url)
+        if weatherlinkData is None:
             return
 
-        json_data = wifiLoggerData.read()
+        json_data = weatherlinkData.read()
 
         json_data = json_data.replace("'", "\"")
         current_weather_data = json.loads(json_data)
 
-        log.info("Parsing Wifi Logger Data...")
+        log.info("Parsing Weatherlink Data...")
 
         # TIMESTAMP = "TIMESTAMP"  # [Unix timestamp]
-        timestamp = current_weather_data["utctime"]
+        timestamp = float(rfc822.mktime_tz(rfc822.parsedate_tz(current_weather_data["observation_time_rfc822"])))
+        #timestamp = current_weather_data["observation_time_rfc822"]
         log.debug("TIMESTAMP: %s" % (timestamp))
 
         # TEMPERATURE = "TEMPERATURE"  # [degC]
-        temperatureF = float(current_weather_data["tempout"])
-        log.debug("temperatureF: %s" % (temperatureF))
-
-        TEMPERATURE = self.toCelsius(temperatureF)
+        TEMPERATURE = float(current_weather_data["temp_c"])
         log.debug("TEMPERATURE: %s" % (TEMPERATURE))
         self.addValue(RMParser.dataType.TEMPERATURE, timestamp, TEMPERATURE)
 
-        hltempout = current_weather_data["hltempout"]
+        current_observation = current_weather_data["davis_current_observation"]
 
         # MINTEMP = "MINTEMP"  # [degC]
-        log.debug("minTempF: %s" % (hltempout[0]))
-
-        MINTEMP = self.toCelsius(float(hltempout[0]))
+        log.debug("minTempF: %s" % (current_observation["temp_day_low_f"]))
+        MINTEMP = self.toCelsius(float(current_observation["temp_day_low_f"]))
         log.debug("MINTEMP: %s" % (MINTEMP))
         self.addValue(RMParser.dataType.MINTEMP, timestamp, MINTEMP)
 
         # MAXTEMP = "MAXTEMP"  # [degC]
-        log.debug("maxTempF: %s" % (hltempout[1]))
-        MAXTEMP = self.toCelsius(float(hltempout[1]))
+        log.debug("maxTempF: %s" % (current_observation["temp_day_high_f"]))
+        MAXTEMP = self.toCelsius(float(current_observation["temp_day_high_f"]))
         log.debug("MAXTEMP: %s" % (MAXTEMP))
         self.addValue(RMParser.dataType.MAXTEMP, timestamp, MAXTEMP)
 
         # RH = "RH"  # [percent]
-        RH = current_weather_data["humout"]
+        RH = current_weather_data["relative_humidity"]
         log.debug("RH: %s" % (RH))
         self.addValue(RMParser.dataType.RH, timestamp, RH)
 
-        hltempout = current_weather_data["hlhumout"]
+
         # MINRH = "MINRH"  # [percent]
-        MINRH = hltempout[0]
+        MINRH = current_observation["relative_humidity_day_low"]
         log.debug("MINRH: %s" % (MINRH))
         self.addValue(RMParser.dataType.MINRH, timestamp, MINRH)
 
         # MAXRH = "MAXRH"  # [percent]
-        MAXRH = hltempout[1]
+        MAXRH = current_observation["relative_humidity_day_high"]
         log.debug("MAXRH: %s" % (MAXRH))
         self.addValue(RMParser.dataType.MAXRH, timestamp, MAXRH)
 
         # WIND = "WIND"  # [meter/sec]
         # here I will use the avg 10 minute speed, will convert from mph
         # 1 Mile per Hour =  0.44704 Meters per Second
-        windMPH = float(current_weather_data["windavg10"])
+        windMPH = float(current_observation["wind_ten_min_avg_mph"])
         log.debug("windMPH: %s" % (windMPH))
 
         WIND = windMPH * 0.44704
@@ -97,7 +100,7 @@ class WifiLogger(RMParser):
 
         # RAIN = "RAIN"  # [mm]
         # 1 inch = 25.4mm
-        rainInch = float(current_weather_data["raind"])
+        rainInch = float(current_observation["rain_day_in"])
         log.debug("rainInch: %s" % (rainInch))
 
         RAIN = rainInch * 25.4
@@ -110,7 +113,7 @@ class WifiLogger(RMParser):
 
         # PRESSURE = "PRESSURE"  # [kilo Pa atmospheric pressure]
         # 1 inch = 3.3864 kpa
-        barInch = float(current_weather_data["bar"])
+        barInch = float(current_weather_data["pressure_in"])
         log.debug("barInch: %s" % (barInch))
 
         PRESSURE = barInch * 3.3864
@@ -118,48 +121,13 @@ class WifiLogger(RMParser):
         self.addValue(RMParser.dataType.PRESSURE, timestamp, PRESSURE)
 
         # DEWPOINT = "DEWPOINT"  # [degC]
-        dewF = float(current_weather_data["dew"])
-        log.debug("dewF: %s" % (dewF))
-
-        DEWPOINT = self.toCelsius(dewF)
+        DEWPOINT = float(current_weather_data["dewpoint_c"])
         log.debug("DEWPOINT: %s" % (DEWPOINT))
         self.addValue(RMParser.dataType.DEWPOINT, timestamp, DEWPOINT)
 
-        RAINRATE = float(current_weather_data["rainr"])
+
+        RAINRATE = float(current_observation["rain_rate_in_per_hr"])
         log.debug("RAINRATE: %s" % (RAINRATE))
-
-        # CONDITION = "CONDITION"  # [string]
-        #
-        # current conditions ... from Davis
-        # Forecast Icon Values
-        #
-        # Value Decimal Value Hex Segments Shown Forecast
-        currentConditionValue = int(current_weather_data["foreico"])
-
-        # 8 0x08 Sun Mostly Clear
-        # mapping to "Fair"
-        if currentConditionValue == 8:
-            self.addValue(RMParser.dataType.CONDITION, timestamp, RMParser.conditionType.Fair)
-            log.debug("Current Condition Fair")
-
-        # 6 0x06 Partial Sun + Cloud Partly Cloudy
-        # 7 0x07 Partial Sun + Cloud + Rain Partly Cloudy, Rain within 12 hours
-        # 22 0x16 Partial Sun + Cloud + Snow Partly Cloudy, Snow within 12 hours
-        # 23 0x17 Partial Sun + Cloud + Rain + Snow Partly Cloudy, Rain or Snow within 12 hours
-        # mapping to "PartlyCloudy"
-        elif ((currentConditionValue == 6) or (currentConditionValue == 7) or (currentConditionValue == 22) or (currentConditionValue == 23)):
-            self.addValue(RMParser.dataType.CONDITION, timestamp, RMParser.conditionType.PartlyCloudy)
-            log.debug("Current Condition Partly Cloudy")
-
-        # 2 0x02 Cloud Mostly Cloudy
-        # 3 0x03 Cloud + Rain Mostly Cloudy, Rain within 12 hours
-        # 18 0x12 Cloud + Snow Mostly Cloudy, Snow within 12 hours
-        # 19 0x13 Cloud + Rain + Snow Mostly Cloudy, Rain or Snow within 12 hours
-        # mapping to "MostlyCloudy"
-        elif ((currentConditionValue == 2) or (currentConditionValue == 3) or (currentConditionValue == 18) or (currentConditionValue == 19)):
-            self.addValue(RMParser.dataType.CONDITION, timestamp, RMParser.conditionType.MostlyCloudy)
-            log.debug("Current Condition Mostly Cloudy")
-
 
         # here lets check rain rate
         if (0 < RAINRATE <= 0.098):
@@ -176,5 +144,5 @@ class WifiLogger(RMParser):
 
 # uncomment for testing
 #if __name__ == "__main__":
-#    p = WifiLogger()
+#    p = Weatherlink()
 #    p.perform()
