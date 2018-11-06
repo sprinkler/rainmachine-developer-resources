@@ -14,19 +14,26 @@ import json
 class WifiLogger(RMParser):
     parserName = "WifiLogger Parser"
     parserDescription = "WifiLogger Parser"
-    parserInterval = 600  # delay between runs in seconds
+    parserInterval = 6 * 3600  # delay between runs in seconds
     parserForecast = False
     parserHistorical = True
     parserEnabled = True
     parserDebug = False
+
+    params = {
+        "WIFILoggerURL": "http://192.168.0.1/wflexp.json"
+    }
 
     def toCelsius(self, tempF):
         return (tempF - 32) * 5/9
 
     def perform(self):
 
-        # add URL FOR WiFiLogger connected to Davis Console...
-        url = "http://10.123.1.120/wflexp.json"
+        url = self.getParamAsString(self.params.get("WIFILoggerURL"))
+        if url is None:
+            self.lastKnownError = "Invalid WIFILogger URL"
+            log.error(self.lastKnownError)
+            return False
 
         wifiLoggerData = self.openURL(url)
         if wifiLoggerData is None:
@@ -174,7 +181,18 @@ class WifiLogger(RMParser):
             self.addValue(RMParser.dataType.CONDITION, timestamp, RMParser.conditionType.HeavyRain)
             log.debug("Current Condition Heavy Rain")
 
+    def getParamAsString(self, param):
+        try:
+            param = param.strip()
+        except Exception:
+            return None
+
+        if not param:
+            return None
+
+        return param
+
 # uncomment for testing
-#if __name__ == "__main__":
-#    p = WifiLogger()
-#    p.perform()
+if __name__ == "__main__":
+    p = WifiLogger()
+    p.perform()

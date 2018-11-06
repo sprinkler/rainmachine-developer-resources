@@ -14,13 +14,18 @@ import rfc822
 
 
 class Weatherlink(RMParser):
-    parserName = "Weatherlink Parser"
-    parserDescription = "Davis Weatherlink Parser"
-    parserInterval = 3600  # delay between runs in seconds
+    parserName = "Davis Weatherlink.Com Parser"
+    parserDescription = "Davis Weatherlink.Com Service Parser "
+    parserInterval = 6 * 3600  # delay between runs in seconds
     parserForecast = False
     parserHistorical = True
     parserEnabled = True
     parserDebug = False
+    params = {
+        "DeviceId": "",
+        "Password": "",
+        "APIToken": ""
+    }
 
     def toCelsius(self, tempF):
         return (tempF - 32) * 5/9
@@ -31,19 +36,43 @@ class Weatherlink(RMParser):
         # this can easily be put in the UI and passed to parser...
 
       #  https: // api.weatherlink.com / v1 / NoaaExt.json?user = DID & pass=ownerPW & apiToken = tokenID
+        did = self.getParamAsString(self.params.get("DeviceId"))
+        pwd = self.getParamAsString(self.params.get("Password"))
+        token = self.getParamAsString(self.params.get("APIToken"))
 
-        url = "https://api.weatherlink.com/v1/NoaaExt.json?user=<DID>&pass=<ownerPW>&apiToken=<tokenID>"
+        if did is None:
+            self.lastKnownError = "Missing Device ID"
+            log.error(self.lastKnownError)
+            return False
+
+        if pwd is None:
+            self.lastKnownError = "Missing Device Password"
+            log.error(self.lastKnownError)
+            return False
+
+        if token is None:
+            self.lastKnownError = "Missing API Token"
+            log.error(self.lastKnownError)
+            return False
+
+        url = "https://api.weatherlink.com/v1/NoaaExt.json?user=" + str(did) + "&pass=" + str(pwd) + "&apiToken=" + str(token)
 
         weatherlinkData = self.openURL(url)
         if weatherlinkData is None:
+            self.lastKnownError = "No reponse from WeatherLink service"
+            log.error(self.lastKnownError)
             return
 
-        json_data = weatherlinkData.read()
+        try:
+            json_data = weatherlinkData.read()
+            json_data = json_data.replace("'", "\"")
+            current_weather_data = json.loads(json_data)
+        except Exception:
+            self.lastKnownError = "Invalid data received from WeatherLink service"
+            log.error(self.lastKnownError)
+            return False
 
-        json_data = json_data.replace("'", "\"")
-        current_weather_data = json.loads(json_data)
-
-        log.info("Parsing Weatherlink Data...")
+        log.debug("Parsing Weatherlink Data...")
 
         # TIMESTAMP = "TIMESTAMP"  # [Unix timestamp]
         timestamp = float(rfc822.mktime_tz(rfc822.parsedate_tz(current_weather_data["observation_time_rfc822"])))
@@ -142,7 +171,17 @@ class Weatherlink(RMParser):
             self.addValue(RMParser.dataType.CONDITION, timestamp, RMParser.conditionType.HeavyRain)
             log.debug("Current Condition Heavy Rain")
 
-# uncomment for testing
-#if __name__ == "__main__":
-#    p = Weatherlink()
-#    p.perform()
+    def getParamAsString(self, param):
+        try:
+            param = param.strip()
+        except Exception:
+            return None
+
+        if not param:
+            return None
+
+        return param
+
+if __name__ == "__main__":
+    p = Weatherlink()
+    p.perform()
