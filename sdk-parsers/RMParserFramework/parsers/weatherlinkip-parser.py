@@ -18,8 +18,8 @@ import binascii
 class WeatherLinkIP(RMParser):
     parserName = "DavisWeatherLinkIP Parser"
     parserDescription = "Davis Weather Station with WeatherLink IP (local network access)"
-    parserForecast = True
-    parserHistorical = False
+    parserForecast = False
+    parserHistorical = True
     parserEnabled = True
     parserDebug = False
     parserInterval = 6 * 3600
