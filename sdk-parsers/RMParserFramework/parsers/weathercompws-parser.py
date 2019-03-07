@@ -13,7 +13,7 @@ from RMUtilsFramework.rmLogging import log
 from RMUtilsFramework.rmTimeUtils import rmNowDateTime, rmGetStartOfDay
 from RMUtilsFramework.rmUtils import distanceBetweenGeographicCoordinatesAsKm
 from RMDataFramework.rmUserSettings import globalSettings
-import json, time, sys
+import json, time
 import datetime, calendar
 
 
@@ -26,8 +26,8 @@ class WeathercomPWS(RMParser):
     parserDebug = False
     parserInterval = 6 * 3600
 
-    params = {"apiKey": ""
-        , "pwsStationName": ""
+    params = {"apiKey": "be87c577f9414a3987c577f9413a3917"
+        , "pwsStationName": "IBRITISH376"
         }
     apiURL = None
     jsonResponse = None
