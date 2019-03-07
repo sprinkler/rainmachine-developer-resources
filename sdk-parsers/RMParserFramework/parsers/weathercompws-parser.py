@@ -228,8 +228,7 @@ class WeathercomPWS(RMParser):
             self.addValues(RMParser.dataType.WIND, wind)
             self.addValues(RMParser.dataType.CONDITION, condition)
 
-        except Exception, e:
-            #print >> sys.stderr, "Exception: %s" % str(e)
+        except
             log.error("Failed to get simple forecast")
 
 
