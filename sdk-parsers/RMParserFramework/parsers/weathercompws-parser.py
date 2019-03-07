@@ -26,8 +26,8 @@ class WeathercomPWS(RMParser):
     parserDebug = False
     parserInterval = 6 * 3600
 
-    params = {"apiKey": "be87c577f9414a3987c577f9413a3917"
-        , "pwsStationName": "IBRITISH376"
+    params = {"apiKey": ""
+        , "pwsStationName": ""
         }
     apiURL = None
     jsonResponse = None
