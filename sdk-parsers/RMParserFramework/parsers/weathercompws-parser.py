@@ -111,8 +111,7 @@ class WeathercomPWS(RMParser):
     #get 5day forecast data from new PWS only Weather API using geocode version
         self.apiURL= "https://api.weather.com/v3/wx/forecast/daily/5day?geocode=" + str(llat) + "," + str(llon) + "&format=json&units=m&language=en-CA&apiKey=" + str(apiKey)
 
-        self.csapiURL = self.apiURL  # url for pws
-        d = self.openURL(self.csapiURL)
+        d = self.openURL(self.apiURL)
         jsonContent = d.read()
         #log.debug(jsonContent)
         self.jsonResponse = json.loads(jsonContent)
