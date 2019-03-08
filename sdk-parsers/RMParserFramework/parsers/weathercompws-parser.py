@@ -77,8 +77,7 @@ class WeathercomPWS(RMParser):
             log.debug("getting data from specified station")
             # try to split
 
-        self.csapiURL = self.apiURL  # url for pws
-        d = self.openURL(self.csapiURL)
+        d = self.openURL(self.apiURL)
         jsonContent = d.read()
         #log.debug(str(jsonContent))
 
