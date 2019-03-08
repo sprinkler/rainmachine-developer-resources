@@ -4,7 +4,7 @@
 #          Codrin Juravle <codrin.juravle@mini-box.com>
 
 
-from RMParserFramework.rmParser import RMParser
+opefrom RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
 from RMUtilsFramework.rmTimeUtils import *
 from RMDataFramework.rmUserSettings import globalSettings
