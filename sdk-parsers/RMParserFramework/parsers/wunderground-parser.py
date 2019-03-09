@@ -1,3 +1,13 @@
+def __toInt(self, value):
+    # type: (object) -> object
+    try:
+        if value is None:
+            return value
+        return int(value)
+    except:
+        return None
+
+
 # Copyright (c) 2015 RainMachine, Green Electronics LLC
 # All rights reserved.
 # Authors: Nicu Pavel <npavel@mini-box.com>

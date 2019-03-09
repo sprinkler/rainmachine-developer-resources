@@ -188,6 +188,7 @@ class WeathercomPWS(RMParser):
             humidity = []
             qpf = []
             condition = []
+            #log.debug(str(jsonResponse))
 
             for i in range(5):
                 tt = self.__toInt(jsonResponse["validTimeUtc"][i])
@@ -212,6 +213,7 @@ class WeathercomPWS(RMParser):
                 humidity.append((humidityDay + humidityNight) /2) #Average the day and night forecast
                 condition.append(self.conditionConvert(jsonResponse["daypart"][0]["wxPhraseLong"][i])) #take only the first condition statement
 
+
             temperatureMax = zip(timestamp, temperatureMax)
             temperatureMin = zip(timestamp, temperatureMin)
             wind = zip(timestamp, wind)
@@ -226,7 +228,8 @@ class WeathercomPWS(RMParser):
             self.addValues(RMParser.dataType.WIND, wind)
             self.addValues(RMParser.dataType.CONDITION, condition)
 
-        except:
+        except AssertionError as error:
+            log.error(str(error))
             log.error("Failed to get simple forecast")
 
 
@@ -239,6 +242,11 @@ class WeathercomPWS(RMParser):
             return timestamp
 
     def conditionConvert(self, conditionStr):
+        conditionStrType = type(conditionStr)
+
+        if str(conditionStrType).find("None") is not -1:
+            conditionStr = 'None'
+
         if 'Drizzle' in conditionStr:
             return RMParser.conditionType.LightRain
         elif 'Chance of Rain' in conditionStr:
@@ -285,7 +293,7 @@ class WeathercomPWS(RMParser):
     def __toFloat(self, value):
         try:
             if value is None:
-                return value
+                return 0.0
             return float(value)
         except:
             return None
@@ -300,7 +308,7 @@ class WeathercomPWS(RMParser):
             return None
 
 
-#if __name__ == "__main__":
-#    log.info("WeathercomPWS parser running")
-#    p = WeathercomPWS()
-#    p.perform()
+if __name__ == "__main__":
+    log.info("WeathercomPWS parser running")
+    p = WeathercomPWS()
+    p.perform()
