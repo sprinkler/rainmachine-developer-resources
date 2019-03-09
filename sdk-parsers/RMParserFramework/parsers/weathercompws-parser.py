@@ -308,7 +308,7 @@ class WeathercomPWS(RMParser):
             return None
 
 
-if __name__ == "__main__":
-    log.info("WeathercomPWS parser running")
-    p = WeathercomPWS()
-    p.perform()
+#if __name__ == "__main__":
+#    log.info("WeathercomPWS parser running")
+#    p = WeathercomPWS()
+#    p.perform()
