@@ -4,13 +4,11 @@
 #          Ciprian Misaila <ciprian.misaila@mini-box.com>
 #   Meteobridge parser:
 #          Gordon Larsen    <gordon@the-larsens.ca>
+#
 
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
-from RMUtilsFramework.rmTimeUtils import rmCurrentTimestamp
-import datetime
-import calendar
-import urllib
+from urllib import urlopen as request
 
 
 class MeteobridgePWS(RMParser):
@@ -20,11 +18,11 @@ class MeteobridgePWS(RMParser):
     parserHistorical = True
     parserEnabled = True
     parserDebug = True
-    parserInterval = 1 * 60
+    parserInterval = 10 * 60
 
     params = {"top_level_url": "meteobridge.internal.home",
-              "username": "meteobridge",
-              "password": "meteobridge"
+              "username": "",
+              "password": ""
               }
 
     def isEnabledForLocation(self, timezone, lat, long):
@@ -32,6 +30,7 @@ class MeteobridgePWS(RMParser):
 
     def perform(self):
 
+        passwd = ""
         user = self.params.get("username")
         passwd = self.params.get("password")
 
@@ -41,32 +40,33 @@ class MeteobridgePWS(RMParser):
         values = "[th0temp-act]%20[th0hum-act]%20[thb0press-act]%20[sol0evo-act]%20[mbsystem-latitude]%20" \
                  "[mbsystem-longitude]%20[th0temp-dmax]%20[th0temp-dmin]%20[th0hum-dmax]%20" \
                  "[th0hum-dmin]%20[wind0avgwind-act]%20[sol0rad-act]%20[rain0total-daysum]%20" \
-                 "[th0dew-act]%20[UYYYY][UMM][UDD][Uhh][Umm][Uss]"
+                 "[th0dew-act]%20[UYYYY][UMM][UDD][Uhh][Umm][Uss]%20[epoch]"
 
         headers = "&contenttype=text/plain;charset=iso-8859-1"
 
-        log.debug(str(urlpath) + str(values) + str(headers))
+        # log.debug(str(urlpath) + str(values) + str(headers))
 
         try:
             mburl = urlpath + values + headers
-            d = urllib.urlopen(str(mburl))
+            d = request(str(mburl))
+
+            if d.getcode() is not 200:
+                log.error("Missing username or password")
+                return
+
             mbrdata = d.read()
+            # log.debug(mbrdata)
 
         except AssertionError as error:
             log.error(str(error))
             log.error("Cannot open Meteobridge")
 
-        log.debug(mbrdata)
-
-        self.getStationData(mbrdata)
+        self.getstationdata(mbrdata)
 
         return
 
-    def getStationData(self, pwsContent):
-        # pwsContent = pwsContent.strip('b')
-        # pwsContent = pwsContent.strip("'")
-        pwsArray = pwsContent.split(" ")
-        log.debug(pwsArray)
+    def getstationdata(self, pwscontent):
+        pwsArray = pwscontent.split(" ")
 
         lat = float(pwsArray[4])
         long = float(pwsArray[5])
@@ -81,7 +81,7 @@ class MeteobridgePWS(RMParser):
         wind = float(pwsArray[10])
         solarradiation = float(pwsArray[11])  # needs to be converted from watt/sqm*h to Joule/sqm
         # log.debug(str(temperature) + " " + str(et0) + " " + str(mintemp) + " " + str(maxtemp) +
-        #         " " + str(rh) + " " + str(wind) + " " + str(solarradiation))
+        #          " " + str(rh) + " " + str(wind) + " " + str(solarradiation))
 
         if solarradiation is not None:
             solarradiation *= 0.0864
@@ -90,21 +90,10 @@ class MeteobridgePWS(RMParser):
         dewpoint = float(pwsArray[13])
         pressure = float(pwsArray[2]) / 10
 
-        # time utc
-        jutc = pwsArray[14]
+        if self.parserDebug:
+            self.__toUtc(pwsArray[14], temperature, rain)
 
-        yyyy = self.__toInt(jutc[:4])
-        mm = self.__toInt(jutc[4:6])
-        dd = self.__toInt(jutc[6:8])
-        hour = self.__toInt(jutc[8:10])
-        mins = self.__toInt(jutc[10:12])
-        log.debug("Observations for date: %d/%d/%d, time: %d%dz Temp: %s, Rain: %s" % (
-        yyyy, mm, dd, hour, mins, temperature, rain))
-
-        dd = datetime.datetime(yyyy, mm, dd, hour, mins)
-        timestamp = calendar.timegm(dd.timetuple())
-        #timestamp = self.__parseDateTime(timestamp)
-        timestamp = rmCurrentTimestamp()
+        timestamp = int(pwsArray[15])
 
         self.addValue(RMParser.dataType.TEMPERATURE, timestamp, temperature)
         self.addValue(RMParser.dataType.MINTEMP, timestamp, mintemp)
@@ -133,7 +122,6 @@ class MeteobridgePWS(RMParser):
             return timestamp
 
     def __toInt(self, value):
-        # type: (object) -> object
         try:
             if value is None:
                 return value
@@ -141,6 +129,17 @@ class MeteobridgePWS(RMParser):
         except:
             return None
 
-#if __name__ == "__main__":
+    def __toUtc(self, jutc, t, r):
+
+        # time utc
+        yyyy = self.__toInt(jutc[:4])
+        mm = self.__toInt(jutc[4:6])
+        dd = self.__toInt(jutc[6:8])
+        hour = self.__toInt(jutc[8:10])
+        mins = self.__toInt(jutc[10:12])
+        log.debug("Observations for date: {:d}/{:d}/{:d}, time: {:d}{:d}z Temp: {}, Rain: {}"
+                  .format(yyyy, mm, dd, hour, mins, t, r))
+
+# if __name__ == "__main__":
 #    p = MeteobridgePWS()
 #    p.perform()
