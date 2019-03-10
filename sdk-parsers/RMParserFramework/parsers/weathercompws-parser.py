@@ -11,7 +11,6 @@
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
 from RMUtilsFramework.rmTimeUtils import rmNowDateTime, rmGetStartOfDay
-from RMUtilsFramework.rmUtils import distanceBetweenGeographicCoordinatesAsKm
 from RMDataFramework.rmUserSettings import globalSettings
 import json, time
 import datetime, calendar
@@ -93,21 +92,21 @@ class WeathercomPWS(RMParser):
                 log.error(self.lastKnownError)
         else:
             self.jsonResponse = json.loads(jsonContent)
-            #err = self.jsonResponse.get("response").get("error")
-            #if not err:
+            # err = self.jsonResponse.get("response").get("error")
+            # if not err:
             success = True
 
         if not success:
             log.error(self.lastKnownError)
             return
 
-        #log.debug(str(self.jsonResponse))
-        geoCode = self.getStationData(self.jsonResponse)
-        llat = geoCode["llat"]
-        llon = geoCode["llon"]
+        # log.debug(str(self.jsonResponse))
+        geocode = self.getStationData(self.jsonResponse)
+        llat = geocode["llat"]
+        llon = geocode["llon"]
         log.debug("Station Lat: " + str(llat) + " Lon: " + str(llon))
 
-    #get 5day forecast data from new PWS only Weather API using geocode version
+        # get 5day forecast data from new PWS only Weather API using geocode version
         self.apiURL= "https://api.weather.com/v3/wx/forecast/daily/5day?geocode=" + str(llat) + "," + str(llon) + "&format=json&units=m&language=en-CA&apiKey=" + str(apiKey)
 
         d = self.openURL(self.apiURL)
