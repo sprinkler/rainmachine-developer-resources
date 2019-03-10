@@ -7,11 +7,9 @@
 
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
-# from RMUtilsFramework.rmTimeUtils import rmNowDateTime, rmGetStartOfDay
-# from RMDataFramework.rmUserSettings import globalSettings
-# import time
-import datetime, calendar
-# from requests.auth import HTTPBasicAuth
+from RMUtilsFramework.rmTimeUtils import rmCurrentTimestamp
+import datetime
+import calendar
 import urllib
 
 
@@ -105,7 +103,8 @@ class MeteobridgePWS(RMParser):
 
         dd = datetime.datetime(yyyy, mm, dd, hour, mins)
         timestamp = calendar.timegm(dd.timetuple())
-        timestamp = self.__parseDateTime(timestamp)
+        #timestamp = self.__parseDateTime(timestamp)
+        timestamp = rmCurrentTimestamp()
 
         self.addValue(RMParser.dataType.TEMPERATURE, timestamp, temperature)
         self.addValue(RMParser.dataType.MINTEMP, timestamp, mintemp)
