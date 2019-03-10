@@ -20,7 +20,7 @@ class MeteobridgePWS(RMParser):
     parserDebug = True
     parserInterval = 10 * 60
 
-    params = {"top_level_url": "meteobridge.internal.home",
+    params = {"top_level_url": "",
               "username": "",
               "password": ""
               }
@@ -30,7 +30,6 @@ class MeteobridgePWS(RMParser):
 
     def perform(self):
 
-        passwd = ""
         user = self.params.get("username")
         passwd = self.params.get("password")
 
