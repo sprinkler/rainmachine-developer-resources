@@ -62,6 +62,8 @@ class MeteobridgePWS(RMParser):
 
         self.getstationdata(mbrdata)
 
+        log.info("Updated data from Meteobridge")
+
         return
 
     def getstationdata(self, pwscontent):
