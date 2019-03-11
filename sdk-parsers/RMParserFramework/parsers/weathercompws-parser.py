@@ -18,16 +18,17 @@ import datetime, calendar
 
 class WeathercomPWS(RMParser):
     parserName = "Weather.com PWS Parser"
-    parserDescription = "Global weather service with personal weather station access from Weather.com (formerly WUnderground)"
+    parserDescription = "Global weather service with personal weather station " \
+                        "access from Weather.com (formerly WUnderground)"
     parserForecast = True
     parserHistorical = True
     parserEnabled = True
-    parserDebug = False
-    parserInterval = 6 * 3600
+    parserDebug = True
+    parserInterval = 1 * 60
 
-    params = {"apiKey": ""
-        , "pwsStationName": ""
-        }
+    params = {"apiKey": "be87c577f9414a3987c577f9413a3917",
+              "pwsStationName": "IBRITISH376"
+              }
     apiURL = None
     jsonResponse = None
 
@@ -48,7 +49,8 @@ class WeathercomPWS(RMParser):
         yyyyystr = str(yyyyy)
 
         self.lastKnownError = ""
-        apiKey = self.params.get("apiKey", None)
+        apiKey = self.params.get("apiKey")
+
         if apiKey is None or not apiKey or not isinstance(apiKey, str):
             log.error("No API Key provided")
             self.lastKnownError = "Error: No API Key provided"
@@ -60,16 +62,19 @@ class WeathercomPWS(RMParser):
             self.lastKnownError = "Error: No PWS Name provided"
             return
 
-        #self.apiURL = "https://api.weather.com/v2/pws/dailysummary/7day?stationId=" + pwsStationName + "&format=json&units=m&apiKey=" + str(apiKey)
-        #get yesterday's observations
+        # self.apiURL = "https://api.weather.com/v2/pws/dailysummary/7day?stationId=" +
+        # pwsStationName + "&format=json&units=m&apiKey=" + str(apiKey)
+        # get yesterday's observations
         self.apiURL = "https://api.weather.com/v2/pws/history/daily?stationId=" + pwsStationName + "&format=json&units=m&date="+ yyyyystr + mmystr + ddystr + "&apiKey=" + str(apiKey)
-        #get current observations
-        #self.apiURL = "https://api.weather.com/v2/pws/observations/current?stationId=" + pwsStationName + "&format=json&units=m&apiKey=" + str(apiKey)
+        # get current observations
+        # self.apiURL = "https://api.weather.com/v2/pws/observations/current?stationId=" +
+        # pwsStationName + "&format=json&units=m&apiKey=" + str(apiKey)
+        log.debug(self.apiURL)
 
         success = False
         if self.params.get("pwsStationName"):
             stationName = self.params.get("pwsStationName")
-            if (stationName is None or not stationName or not isinstance(stationName, str)):
+            if stationName is None or not stationName or not isinstance(stationName, str):
                 log.error("Station ID cannot be empty")
                 self.lastKnownError = "Error: Station ID cannot be empty"
                 return
@@ -78,7 +83,7 @@ class WeathercomPWS(RMParser):
 
         d = self.openURL(self.apiURL)
         jsonContent = d.read()
-        #log.debug(str(jsonContent))
+        # log.debug(str(jsonContent))
 
         if jsonContent is None:
             self.lastKnownError = "Error: Bad response"

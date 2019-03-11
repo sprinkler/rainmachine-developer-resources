@@ -20,7 +20,7 @@ class MeteobridgePWS(RMParser):
     parserDebug = True
     parserInterval = 10 * 60
 
-    params = {"top_level_url": "",
+    params = {"IP_address": "",
               "username": "",
               "password": ""
               }
@@ -32,8 +32,12 @@ class MeteobridgePWS(RMParser):
 
         user = self.params.get("username")
         passwd = self.params.get("password")
+        top_level_url = self.params.get("IP_address")
 
-        top_level_url = self.params.get("top_level_url")
+        if str(top_level_url) == "":
+            log.error("IP address invalid or missing")
+            return
+
         urlpath = "http://" + user + ":" + passwd + "@" + top_level_url + "/cgi-bin/template.cgi?template="
 
         values = "[th0temp-act]%20[th0hum-act]%20[thb0press-act]%20[sol0evo-act]%20[mbsystem-latitude]%20" \
@@ -50,7 +54,7 @@ class MeteobridgePWS(RMParser):
             d = request(str(mburl))
 
             if d.getcode() is not 200:
-                log.error("Missing username or password")
+                log.error("Missing or incorrect username or password")
                 return
 
             mbrdata = d.read()
@@ -142,5 +146,5 @@ class MeteobridgePWS(RMParser):
                   .format(yyyy, mm, dd, hour, mins, t, r))
 
 # if __name__ == "__main__":
-#    p = MeteobridgePWS()
-#    p.perform()
+#   p = MeteobridgePWS()
+#   p.perform()
