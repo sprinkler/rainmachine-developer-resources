@@ -84,7 +84,7 @@ class MeteobridgePWS(RMParser):
         minrh = float(pwsArray[9])
         maxrh = float(pwsArray[8])
         wind = float(pwsArray[10])
-        wind = wind / 3.6 #convert kph to mps
+        # wind = wind / 3.6 # the Meteobridge already reports in mps so conversion is not required
         solarradiation = float(pwsArray[11])  # needs to be converted from watt/sqm*h to Joule/sqm
         # log.debug(str(temperature) + " " + str(et0) + " " + str(mintemp) + " " + str(maxtemp) +
         #          " " + str(rh) + " " + str(wind) + " " + str(solarradiation))
