@@ -144,7 +144,7 @@ class MeteobridgePWS(RMParser):
         hour = self.__toInt(jutc[8:10])
         mins = self.__toInt(jutc[10:12])
         log.debug("Observations for date: {:d}/{:d}/{:d}, time: {:d}{:d}z Temp: {}, Rain: {}, Wind: {}"
-                  .format(yyyy, mm, dd, hour, mins, t, r))
+                  .format(yyyy, mm, dd, hour, mins, t, r, w))
 
 # if __name__ == "__main__":
 #   p = MeteobridgePWS()
