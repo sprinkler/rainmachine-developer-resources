@@ -97,7 +97,7 @@ class MeteobridgePWS(RMParser):
         pressure = float(pwsArray[2]) / 10
 
         if self.parserDebug:
-            self.__toUtc(pwsArray[14], temperature, rain)
+            self.__toUtc(pwsArray[14], temperature, rain, wind)
 
         timestamp = int(pwsArray[15])
 
@@ -135,7 +135,7 @@ class MeteobridgePWS(RMParser):
         except:
             return None
 
-    def __toUtc(self, jutc, t, r):
+    def __toUtc(self, jutc, t, r, w):
 
         # time utc
         yyyy = self.__toInt(jutc[:4])
@@ -143,7 +143,7 @@ class MeteobridgePWS(RMParser):
         dd = self.__toInt(jutc[6:8])
         hour = self.__toInt(jutc[8:10])
         mins = self.__toInt(jutc[10:12])
-        log.debug("Observations for date: {:d}/{:d}/{:d}, time: {:d}{:d}z Temp: {}, Rain: {}"
+        log.debug("Observations for date: {:d}/{:d}/{:d}, time: {:d}{:d}z Temp: {}, Rain: {}, Wind: {}"
                   .format(yyyy, mm, dd, hour, mins, t, r))
 
 # if __name__ == "__main__":
