@@ -32,7 +32,7 @@ class MeteobridgePWS(RMParser):
 
         user = self.params.get("username")
         passwd = self.params.get("password")
-        top_level_url = self.params.get("IP_address")
+        top_level_url = str(self.params.get("IP_address"))
 
         if str(top_level_url) == "":
             log.error("IP address invalid or missing")
