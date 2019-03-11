@@ -23,8 +23,8 @@ class WeathercomPWS(RMParser):
     parserForecast = True
     parserHistorical = True
     parserEnabled = True
-    parserDebug = True
-    parserInterval = 1 * 60
+    parserDebug = False
+    parserInterval = 6 * (60 * 60)
 
     params = {"apiKey": "",
               "pwsStationName": ""
