@@ -57,3 +57,4 @@ if __name__ == "__main__":
         log.info("RAIN        Sanitized %s to %s" % (value, l.sanitize(RMWeatherDataType.RAIN, value)))
         log.info("PRESSURE    Sanitized %s to %s" % (value, l.sanitize(RMWeatherDataType.PRESSURE, value)))
         log.info("-" * 100)
+
