@@ -26,8 +26,8 @@ class WeathercomPWS(RMParser):
     parserDebug = True
     parserInterval = 1 * 60
 
-    params = {"apiKey": "be87c577f9414a3987c577f9413a3917",
-              "pwsStationName": "IBRITISH376"
+    params = {"apiKey": "",
+              "pwsStationName": ""
               }
     apiURL = None
     jsonResponse = None
@@ -116,7 +116,7 @@ class WeathercomPWS(RMParser):
 
         d = self.openURL(self.apiURL)
         jsonContent = d.read()
-        #log.debug(jsonContent)
+        # log.debug(jsonContent)
         self.jsonResponse = json.loads(jsonContent)
 
         self.getSimpleForecast(self.jsonResponse)
@@ -125,7 +125,7 @@ class WeathercomPWS(RMParser):
 
     def getStationData(self, jsonData):
         # daily summary for yesterday
-        #log.debug(str(jsonData))
+        # log.debug(str(jsonData))
         try:
             llat = jsonData["observations"][0]["lat"]
             llon = jsonData["observations"][0]["lon"]
@@ -192,7 +192,7 @@ class WeathercomPWS(RMParser):
             humidity = []
             qpf = []
             condition = []
-            #log.debug(str(jsonResponse))
+            # log.debug(str(jsonResponse))
 
             for i in range(5):
                 tt = self.__toInt(jsonResponse["validTimeUtc"][i])
@@ -217,7 +217,6 @@ class WeathercomPWS(RMParser):
                 humidity.append((humidityDay + humidityNight) /2) #Average the day and night forecast
                 condition.append(self.conditionConvert(jsonResponse["daypart"][0]["wxPhraseLong"][i])) #take only the first condition statement
 
-
             temperatureMax = zip(timestamp, temperatureMax)
             temperatureMin = zip(timestamp, temperatureMin)
             wind = zip(timestamp, wind)
@@ -235,7 +234,6 @@ class WeathercomPWS(RMParser):
         except AssertionError as error:
             log.error(str(error))
             log.error("Failed to get simple forecast")
-
 
     def __parseDateTime(self, timestamp, roundToHour=True):
         if timestamp is None:
