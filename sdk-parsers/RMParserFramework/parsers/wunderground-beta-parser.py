@@ -13,7 +13,7 @@ import json
 
 
 class WUndergroundBeta(RMParser):
-    parserName = "WUnderground Parser Beta"
+    parserName = "WUnderground Beta Parser"
     parserDescription = "Global weather service with personal weather station access from Weather Underground"
     parserForecast = True
     parserHistorical = True
@@ -50,49 +50,49 @@ class WUndergroundBeta(RMParser):
         useCustomStation = self.params.get("useCustomStation", False)
         stationName = self.params.get("customStationName")
 
-        if apiKey is None or not apiKey or not isinstance(apiKey, str):
+        hasForecastData = False
+        hasStationData = False
+        noAPIKey = apiKey is None or not apiKey or not isinstance(apiKey, str)
+
+        if noAPIKey:
             self.getNearbyStationsNoKey()
-            if useCustomStation:
-                if stationName is None or not stationName or not isinstance(stationName, str):
-                    self.lastKnownError = "Error: Station ID cannot be empty when useCustomStation checked"
-                    log.error(self.lastKnownError)
-                    return
-                else:
-                    log.debug("Getting data from specified station")
-                    self.arrStationNames = stationName.split(",")
-                    for stationName in self.arrStationNames:
-                        retValue = self.getStationDataNoKey(stationName)
-                        if retValue:
-                            log.info("WUnderground: station data retrieved for " + stationName)
-                            break
-                        else:
-                            log.info("WUnderground: station data failed to be retrieved for " + stationName)
-                        if not retValue:
-                            self.lastKnownError = "Could not get specified station(s) data without a key"
-                            log.error(self.lastKnownError)
-                    return
-            else:
-                self.lastKnownError = "You have to use a custom station when not using apiKey"
-                log.error(self.lastKnownError)
         else:
             self.getNearbyPWSStationsWithKey(apiKey)
             self.getNearbyAirportStationsWithKey(apiKey)
-            self.getForecastWithKey(apiKey)
+            hasForecastData = self.getForecastWithKey(apiKey)
+
+        noStationName = stationName is None or not stationName or not isinstance(stationName, str)
+
+        if useCustomStation:
             if stationName is None or not stationName or not isinstance(stationName, str):
-                pass
+                self.lastKnownError = "Warning: Use Nearby Stations is enabled but no station name specified."
+                log.error(self.lastKnownError)
             else:
-                log.debug("Getting data from specified station")
                 self.arrStationNames = stationName.split(",")
                 for stationName in self.arrStationNames:
-                    retValue = self.getStationDataWithKey(apiKey, stationName)
-                    if retValue:
-                        log.info("WUnderground: station data retrieved for " + stationName)
-                        break
+                    if noAPIKey:
+                        hasStationData = self.getStationDataNoKey(stationName)
                     else:
-                        log.info("WUnderground: station data failed to be retrieved for " + stationName)
-                    if not retValue:
-                        self.lastKnownError = "Could not get specified station(s) data with api key"
-                        log.error(self.lastKnownError)
+                        hasStationData = self.getStationDataWithKey(apiKey, stationName)
+
+                    if hasStationData:  # we only get the first one that responds others are for fallback
+                        break
+
+                if not hasStationData:
+                    self.lastKnownError = "Warning: No observed data received from stations."
+                    if noAPIKey:
+                        self.lastKnownError = "Error: No observed data received from stations."
+                    log.error(self.lastKnownError)
+                else:
+                    log.info("WUnderground: station data retrieved for %s" % stationName)
+
+        if not hasForecastData and not noAPIKey:
+            self.lastKnownError = "Warning: No Forecast data received."
+            if not hasStationData:
+                self.lastKnownError = "Error: No forecast or station data received."
+            log.error(self.lastKnownError)
+        else:
+            log.info("WUnderground: forecast data retrieved.")
 
 
     def getNearbyPWSStationsWithKey(self, apiKey):
@@ -109,7 +109,7 @@ class WUndergroundBeta(RMParser):
             stations = json.loads(stationsData)
             self.parseNearbyStationsWithKey(stations)
         except Exception, e:
-            self.lastKnownError = "ERROR: Cannot get nearby pws stations"
+            self.lastKnownError = "Error: Cannot get nearby pws stations"
             log.error(self.lastKnownError)
             return
 
@@ -121,19 +121,18 @@ class WUndergroundBeta(RMParser):
         try:
             d = self.openURL(stationsURL)
             if d is None:
-                self.lastKnownError = "Cannot download nearby airport stations"
+                self.lastKnownError = "Error: Cannot download nearby airport stations"
                 log.error(self.lastKnownError)
             stationsData = d.read()
             stations = json.loads(stationsData)
             self.parseNearbyStationsWithKey(stations)
         except Exception, e:
-            self.lastKnownError = "ERROR: Cannot get airport stations"
+            self.lastKnownError = "Error: Cannot get airport stations"
             log.error(self.lastKnownError)
             return
 
     def parseNearbyStationsWithKey(self, stationsData):
         location = stationsData['location']
-        # arrStationName = location['stationName']
         arrStationId = location.get('stationId', None)
         pws = True
         if arrStationId is None:
@@ -146,6 +145,8 @@ class WUndergroundBeta(RMParser):
 
         arrStations = []
         for index, stationId in enumerate(arrStationId):
+            if stationId is None:
+                continue
             arrStations.append({'id': stationId, 'lat': arrStationLat[index], 'lon': arrStationLon[index], 'distance': arrStationDistance[index]})
         arrStations = sorted(arrStations, key=lambda k: k['distance'])
 
@@ -170,12 +171,12 @@ class WUndergroundBeta(RMParser):
             observations = json.loads(stationData)
             return self.parseStationDataWithKey(observations)
         except Exception, e:
-            self.lastKnownError = "ERROR: Cannot get station data"
+            self.lastKnownError = "Error: Cannot get station data"
             log.error(self.lastKnownError)
             return False
 
     def parseStationDataWithKey(self, jsonData):
-        #daily summary for yesterday
+        # daily summary for yesterday
         tsToday = rmCurrentDayTimestamp()
         tsYesterDay = rmDeltaDayFromTimestamp(tsToday, -1)
         l = RMWeatherDataLimits()
@@ -194,7 +195,7 @@ class WUndergroundBeta(RMParser):
                     dewpoint = self.__toFloat(observation['metric']["dewptAvg"])
                     wind = self.__toFloat(observation['metric']["windspeedAvg"])
                     if wind is not  None:
-                         wind = wind / 3.6 # convertred from kmetersph to mps
+                         wind = wind / 3.6  # converted from kmetersph to mps
 
                     maxpressure = self.__toFloat(observation['metric']["pressureMax"])
                     minpressure = self.__toFloat(observation['metric']["pressureMin"])
@@ -240,7 +241,7 @@ class WUndergroundBeta(RMParser):
             observations = json.loads(stationData)
             # self.parseStationDataWithKey(observations)
         except Exception, e:
-            self.lastKnownError = "ERROR: Cannot get station data"
+            self.lastKnownError = "Error: Cannot get station data"
             log.error(self.lastKnownError)
             return
 
@@ -261,7 +262,7 @@ class WUndergroundBeta(RMParser):
             self.parseForecastWithKey(forecast)
             return True
         except Exception, e:
-            self.lastKnownError = "ERROR: Cannot get station data"
+            self.lastKnownError = "Error: Cannot get forecast data"
             log.error(self.lastKnownError)
             return False
 
@@ -281,108 +282,71 @@ class WUndergroundBeta(RMParser):
             maxtemp = self.__toFloat(arrTemperatureMax[index])
             minrh = self.__toFloat(arrRelativeHumidityDP[2*index])
             maxrh = self.__toFloat(arrRelativeHumidityDP[2*index+1])
-            wind = (self.__toFloat(arrWindSpeddDP[2*index]) + self.__toFloat(arrWindSpeddDP[2*index+1])) / 2.
-            wind = wind / 3.6 #convertred from kmetersph to mps
+            windDay = arrWindSpeddDP[2*index]
+            windNight = arrWindSpeddDP[2*index+1]
+            wind = None
+            if windDay is not None and windNight is not  None:
+                wind = (self.__toFloat(windDay) + self.__toFloat(windNight)) / 2.
+                wind = wind / 3.6  # converted from kmetersph to mps
             qpf = arrQPF[index]
             condition = self.conditionConvertWithKey(arrIconCodeDP[2 * index])
 
-            self.addValue(RMParser.dataType.MINTEMP, timeStamp, mintemp, False)
-            self.addValue(RMParser.dataType.MAXTEMP, timeStamp, maxtemp, False)
-            self.addValue(RMParser.dataType.MINRH, timeStamp, minrh, False)
-            self.addValue(RMParser.dataType.MAXRH, timeStamp, maxrh, False)
-            self.addValue(RMParser.dataType.WIND, timeStamp, wind, False)
-            self.addValue(RMParser.dataType.QPF, timeStamp, qpf, False)
-            self.addValue(RMParser.dataType.CONDITION, timeStamp, condition, False)
+            if mintemp is not None:
+                self.addValue(RMParser.dataType.MINTEMP, timeStamp, mintemp, False)
+            if maxtemp is not None:
+                self.addValue(RMParser.dataType.MAXTEMP, timeStamp, maxtemp, False)
+            if minrh is not None:
+                self.addValue(RMParser.dataType.MINRH, timeStamp, minrh, False)
+            if maxrh is not None:
+                self.addValue(RMParser.dataType.MAXRH, timeStamp, maxrh, False)
+            if wind is not None:
+                self.addValue(RMParser.dataType.WIND, timeStamp, wind, False)
+            if qpf is not None:
+                self.addValue(RMParser.dataType.QPF, timeStamp, qpf, False)
+            if condition is not None:
+                self.addValue(RMParser.dataType.CONDITION, timeStamp, condition, False)
 
     def conditionConvertWithKey(self, iconIndex):
+        if iconIndex is None:
+            return  None
         if iconIndex < 3:
             return RMParser.conditionType.FunnelCloud
-        elif iconIndex < 5:
+        elif iconIndex < 5 or iconIndex == 38:
             return RMParser.conditionType.Thunderstorm
-        elif iconIndex == 5:
+        elif iconIndex in (5, 7, 17, 18):
             return RMParser.conditionType.RainSnow
         elif iconIndex == 6:
             return RMParser.conditionType.RainIce
-        elif iconIndex == 7:
-            return RMParser.conditionType.RainSnow
-        elif iconIndex == 8:
+        elif iconIndex in (8, 10):
             return RMParser.conditionType.FreezingRain
-        elif iconIndex == 9:
+        elif iconIndex in (9, 11, 35):
             return RMParser.conditionType.LightRain
-        elif iconIndex == 10:
-            return RMParser.conditionType.FreezingRain
-        elif iconIndex == 11:
-            return RMParser.conditionType.LightRain
-        elif iconIndex == 12:
+        elif iconIndex in (12, 40):
             return RMParser.conditionType.HeavyRain
-        elif iconIndex == 13:
+        elif iconIndex in (13, 14, 15, 16, 41, 42, 43, 46):
             return RMParser.conditionType.Snow
-        elif iconIndex == 14:
-            return RMParser.conditionType.Snow
-        elif iconIndex == 15:
-            return RMParser.conditionType.Snow
-        elif iconIndex == 16:
-            return RMParser.conditionType.Snow
-        elif iconIndex == 17:
-            return RMParser.conditionType.RainSnow
-        elif iconIndex == 18:
-            return RMParser.conditionType.RainSnow
         elif iconIndex == 20:
             return RMParser.conditionType.Fog
         elif iconIndex == 21:
             return RMParser.conditionType.Haze
         elif iconIndex == 22:
             return RMParser.conditionType.Smoke
-        elif iconIndex == 23:
-            return RMParser.conditionType.Windy
-        elif iconIndex == 24:
+        elif iconIndex in (23, 24):
             return RMParser.conditionType.Windy
         elif iconIndex == 25:
             return RMParser.conditionType.IcePellets
         elif iconIndex == 26:
             return RMParser.conditionType.FewClouds
-        elif iconIndex == 27:
+        elif iconIndex in (27, 28):
             return RMParser.conditionType.MostlyCloudy
-        elif iconIndex == 28:
-            return RMParser.conditionType.MostlyCloudy
-        elif iconIndex == 29:
+        elif iconIndex in (29, 30):
             return RMParser.conditionType.PartlyCloudy
-        elif iconIndex == 30:
-            return RMParser.conditionType.PartlyCloudy
-        elif iconIndex == 31:
+        elif iconIndex in (31, 32, 33, 34, 36):
             return RMParser.conditionType.Fair
-        elif iconIndex == 32:
-            return RMParser.conditionType.Fair
-        elif iconIndex == 33:
-            return RMParser.conditionType.Fair
-        elif iconIndex == 34:
-            return RMParser.conditionType.Fair
-        elif iconIndex == 35:
-            return RMParser.conditionType.LightRain
-        elif iconIndex == 36:
-            return RMParser.conditionType.Fair
-        elif iconIndex == 37:
+        elif iconIndex in (37, 47):
             return RMParser.conditionType.ThunderstormInVicinity
-        elif iconIndex == 38:
-            return RMParser.conditionType.Thunderstorm
-        elif iconIndex == 39:
+        elif iconIndex in (39, 45):
             return RMParser.conditionType.RainShowers
-        elif iconIndex == 40:
-            return RMParser.conditionType.HeavyRain
-        elif iconIndex == 41:
-            return RMParser.conditionType.Snow
-        elif iconIndex == 42:
-            return RMParser.conditionType.Snow
-        elif iconIndex == 43:
-            return RMParser.conditionType.Snow
-        elif iconIndex == 44:
-            return RMParser.conditionType.Unknown
-        elif iconIndex == 45:
-            return RMParser.conditionType.RainShowers
-        elif iconIndex == 46:
-            return RMParser.conditionType.Snow
-        elif iconIndex == 47:
-            return RMParser.conditionType.ThunderstormInVicinity
         else:
             return RMParser.conditionType.Unknown
 
