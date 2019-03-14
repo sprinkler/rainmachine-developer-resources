@@ -1,0 +1,1448 @@
+<html>
+<head>
+    <script type="text/javascript">
+        function postAuthLogin() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "auth/login", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({
+                pwd: document.getElementById("password").value,
+                remember: document.getElementById("remember").checked ? 1 : 0
+            }));
+            alert(xmlhttp.responseText);
+        }
+
+        function postAuthCheck() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "auth/check", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({
+                pwd: document.getElementById("passwordForCheck").value
+            }));
+            alert(xmlhttp.responseText);
+        }
+
+        function postAuthChange() {
+            setTimeout(function() {
+                var newPass =  document.getElementById("newPassword").value;
+                var oldPass =  document.getElementById("oldPassword").value;
+                var checksum =  document.getElementById("newChecksum").value;
+
+                var data = null;
+
+                if(checksum.length > 0) {
+                    data = {checksum: checksum};
+                } else {
+                    data = {
+                        newPass: newPass,
+                        oldPass: oldPass
+                    };
+                }
+
+                xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("POST", "auth/change", false);
+                xmlhttp.setRequestHeader("Content-type","text/plain");
+                xmlhttp.send(JSON.stringify(data));
+                alert(xmlhttp.responseText);
+            }, 0);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postTime() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "machine/time", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({
+                appDate: document.getElementById("timeValue").value
+            }));
+            alert(xmlhttp.responseText);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postSSH() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "machine/ssh", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({
+               enabled: document.getElementById("sshEnable").checked ? true : false
+            }));
+
+            alert(xmlhttp.responseText);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postTouch() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "machine/touch", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({
+                enabled: document.getElementById("touchEnable").checked ? true : false
+            }));
+            alert(xmlhttp.responseText);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postLightLeds() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "machine/lightleds", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({
+                enabled: document.getElementById("lightLedsEnable").checked ? true : false
+            }));
+            alert(xmlhttp.responseText);
+        }
+
+
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postUpdate() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "machine/update", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send("{}");
+            alert(xmlhttp.responseText);
+        }
+
+         function postUpdateCheck() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "machine/update/check", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send("{}");
+            alert(xmlhttp.responseText);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postSysUpgrade() {
+
+
+            var files = document.getElementById("sysUpgradeFile").files;
+            var status = document.getElementById("sysUpgradeStatus");
+            if(!files || files.length < 0) {
+                return;
+            }
+
+            var req = new XMLHttpRequest();
+
+            req.onprogress = function(e) { status.innerHTML = "Status: Uploading " + Math.round((e.loaded/e.total) * 100) + "%"; };
+            req.onloadend = function(e) { status.innerHTML = "Status: Uploading complete. Upgrading: " + req.responseText; };
+            req.onerror = function(e) { status.innerHTML = "Status: Upload error Upgrade aborted."; };
+
+            var reader = new FileReader();
+            reader.onprogress = function(e) { status.innerHTML = "Status: Reading file " + Math.round((e.loaded/e.total) * 100) + "%"; };
+            reader.onloadend = function() {
+                if(!reader.result) {
+                    status.innerHTML = "Status: Error reading file";
+                    return;
+                }
+                status.innerHTML = "Status: Uploading ";
+
+                var binary = new Uint8Array(reader.result);
+
+                req.open("POST", "machine/sysupgrade", false);
+                req.setRequestHeader("Content-Type", "application/octet-stream");
+                req.send(binary);
+            };
+
+            status.innerHTML = "Status: Reading file";
+            reader.readAsArrayBuffer(files[0]);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postDiagUpload() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "diag/upload", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({}));
+            alert(xmlhttp.responseText);
+        }
+
+
+        //---------------------------------------------------------------------------------------
+        //
+
+         function getDiagLog() {
+            var logWindow = window.open();
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("GET", "diag/log", false);
+            xmlhttp.send();
+            var logText = JSON.parse(xmlhttp.responseText);
+
+            logWindow.document.write("<pre>" + logText.log + "</pre>");
+        }
+
+        function postDiagLogLevel() {
+            var level = +document.getElementById("logLevel").value
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "diag/log/level", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify(
+                {
+                    level: level
+                }
+            ));
+            alert(xmlhttp.responseText);
+        }
+
+        function postShutdown() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "machine/shutdown", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({}));
+            alert(xmlhttp.responseText);
+        }
+
+        function postReboot() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "machine/reboot", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({}));
+            alert(xmlhttp.responseText);
+        }
+
+        function postRestart() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "machine/restart", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({}));
+            alert(xmlhttp.responseText);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postProvision() {
+            var s = document.getElementById("timezoneSelect");
+
+            var data = {
+                system: {
+                    useMasterValve:  document.getElementById("useMasterValve").checked
+                },
+                location: {
+                    name: document.getElementById("locationName").value.trim(),
+                    timezone: s.options[s.selectedIndex].value.trim(),
+                    latitude: document.getElementById("latitude").value.trim(),
+                    longitude: document.getElementById("longitude").value.trim(),
+                    elevation: document.getElementById("elevation").value.trim(),
+                    krs: document.getElementById("krs").value.trim()
+                }
+            };
+
+            if(data.location.name.length <= 0) {
+                delete data.location.name;
+            }
+            if(data.location.timezone.length <= 0) {
+                delete data.location.timezone;
+            }
+            if(data.location.latitude.length <= 0) {
+                delete data.location.latitude;
+            }
+            if(data.location.longitude.length <= 0) {
+                delete data.location.longitude;
+            }
+            if(data.location.elevation.length <= 0) {
+                delete data.location.elevation;
+            }
+            if(data.location.krs.length <= 0) {
+                delete data.location.krs;
+            }
+
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "provision", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+
+            try{
+                xmlhttp.send(JSON.stringify(data));
+                alert(xmlhttp.responseText);
+            }
+            catch(e)
+            {
+                console.log(e);
+            }
+        }
+
+        function postProvisionName() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "provision/name", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            try{
+            xmlhttp.send(JSON.stringify({
+                netName: document.getElementById("netName").value,
+            }));
+            alert(xmlhttp.responseText);
+            }
+            catch(e)
+            {
+                console.log(e);
+            }
+        }
+
+        function postProvisionWifiSettings() {
+            var data = {
+                ssid: document.getElementById("ssidName").value,
+                encryption: document.getElementById("ssidEncryption").value,
+                key: document.getElementById("ssidKey").value,
+                networkType: document.getElementById("networkType").value,
+                addressInfo: {
+                    ipaddr: document.getElementById("addressIP").value,
+                    netmask: document.getElementById("addressNetmask").value,
+                    gateway: document.getElementById("addressGateway").value,
+                    dns: document.getElementById("addressDNS").value
+                }
+            };
+
+            try {
+                xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("POST", "provision/wifi/settings", false);
+                xmlhttp.setRequestHeader("Content-type","text/plain");
+                xmlhttp.send(JSON.stringify(data));
+                alert(xmlhttp.responseText);
+            } catch (e) {
+                console.log(e);
+            }
+        }
+
+        function postProvisionCloud() {
+            var data = {
+                email: document.getElementById("cloudEmail").value.trim(),
+                pendingEmail: document.getElementById("cloudPendingEmail").value.trim(),
+                enable: document.getElementById("cloudEnable").checked
+            };
+
+            try {
+                xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("POST", "provision/cloud", false);
+                xmlhttp.setRequestHeader("Content-type","text/plain");
+                xmlhttp.send(JSON.stringify(data));
+                alert(xmlhttp.responseText);
+            } catch (e) {
+                console.log(e);
+            }
+        }
+
+         function postProvisionCloudEmail() {
+            var data = {
+                email: document.getElementById("cloudEmail").value.trim(),
+            };
+
+            try {
+                xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("POST", "provision/cloud/email", false);
+                xmlhttp.setRequestHeader("Content-type","text/plain");
+                xmlhttp.send(JSON.stringify(data));
+                alert(xmlhttp.responseText);
+            } catch (e) {
+                console.log(e);
+            }
+        }
+
+         function postProvisionCloudEnable() {
+            var data = {
+                enable: document.getElementById("cloudEnable").checked
+            };
+
+            try {
+                xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("POST", "provision/cloud/enable", false);
+                xmlhttp.setRequestHeader("Content-type","text/plain");
+                xmlhttp.send(JSON.stringify(data));
+                alert(xmlhttp.responseText);
+            } catch (e) {
+                console.log(e);
+            }
+        }
+
+         function postProvisionCloudReset() {
+            try {
+                xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("POST", "provision/cloud/reset", false);
+                xmlhttp.setRequestHeader("Content-type","text/plain");
+                xmlhttp.send(JSON.stringify({}));
+                alert(xmlhttp.responseText);
+            } catch (e) {
+                console.log(e);
+            }
+        }
+
+        function postProvisionReset() {
+            try {
+                xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("POST", "provision/reset", false);
+                xmlhttp.setRequestHeader("Content-type","text/plain");
+                xmlhttp.send(JSON.stringify(
+                    {
+                        restart: document.getElementById("provisionResetRestart").checked ? true : false
+                    }
+                ));
+                alert(xmlhttp.responseText);
+            } catch (e) {
+                console.log(e);
+            }
+        }
+
+        function postProvisionLedBrightness() {
+            var brightness = document.getElementById("ledBrightness").value;
+            var data = {
+                    system: {
+                        maxLEDBrightness: brightness
+                    }
+            };
+
+            try {
+                xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("POST", "provision", false);
+                xmlhttp.setRequestHeader("Content-type","text/plain");
+                xmlhttp.send(JSON.stringify(data));
+                alert(xmlhttp.responseText);
+            } catch (e) {
+                console.log(e);
+            }
+        }
+
+        function postProvisionRainSensitivity() {
+            var value = document.getElementById("rainSensitivity").value;
+            if (value.length == 0) {
+                return;
+            }
+            var data = {
+                    location: {
+                        rainSensitivity: value
+                    }
+            };
+
+            setTimeout(function() {
+                try {
+                    xmlhttp = new XMLHttpRequest();
+                    xmlhttp.open("POST", "provision", false);
+                    xmlhttp.setRequestHeader("Content-type","text/plain");
+                    xmlhttp.send(JSON.stringify(data));
+                    alert(xmlhttp.responseText);
+                } catch (e) {
+                    console.log(e);
+                }
+            }, 0);
+        }
+
+        function postProvisionWsDays() {
+            var value = document.getElementById("wsDays").value;
+            if (value.length == 0) {
+                return;
+            }
+            var data = {
+                    location: {
+                        wsDays: value
+                    }
+            };
+
+            setTimeout(function() {
+                try {
+                    xmlhttp = new XMLHttpRequest();
+                    xmlhttp.open("POST", "provision", false);
+                    xmlhttp.setRequestHeader("Content-type","text/plain");
+                    xmlhttp.send(JSON.stringify(data));
+                    alert(xmlhttp.responseText);
+                } catch (e) {
+                    console.log(e);
+                }
+            }, 0);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postRestrictionsGlobal() {
+            data = {}
+            data.hotDaysExtraWatering = document.getElementById("hotDaysExtraWatering").checked;
+            data.freezeProtectEnabled = document.getElementById("freezeProtectEnabled").checked;
+
+            if(document.getElementById("freezeProtectTemp").value.length > 0) {
+                data.freezeProtectTemp = document.getElementById("freezeProtectTemp").value;
+            }
+            if(document.getElementById("noWaterInWeekDays").value.length > 0) {
+                data.noWaterInWeekDays = document.getElementById("noWaterInWeekDays").value;
+            }
+            if(document.getElementById("noWaterInMonths").value.length > 0) {
+                data.noWaterInMonths = document.getElementById("noWaterInMonths").value;
+            }
+            if(document.getElementById("rainDelayStartTime").value.length > 0) {
+                data.rainDelayStartTime = document.getElementById("rainDelayStartTime").value;
+            }
+            if(document.getElementById("rainDelayDuration").value.length > 0) {
+                data.rainDelayDuration = document.getElementById("rainDelayDuration").value;
+            }
+
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "restrictions/global", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify(data));
+            alert(xmlhttp.responseText);
+        }
+
+        function postRestrictionsHourly() {
+            var data = {
+                start: document.getElementById("hourlyRestrictionStart").value.trim(),
+                duration: document.getElementById("hourlyRestrictionDuration").value.trim(),
+                weekDays: document.getElementById("hourlyRestrictionWeekDays").value.trim()
+
+            };
+
+            if(data.start.length <= 0 || data.duration.length <= 0) {
+                return;
+            }
+
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "restrictions/hourly", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify(data));
+            alert(xmlhttp.responseText);
+        }
+
+        function postRestrictionsHourlyDelete() {
+            var uid = document.getElementById("hourlyRestrictionToDelID").value.trim();
+            if(uid.length <= 0) {
+                return;
+            }
+
+            var url = "restrictions/hourly/" + uid +"/delete";
+
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", url, false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({}));
+            alert(xmlhttp.responseText);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postProgramCreateUpdate(create) {
+
+            if(!create && document.getElementById("progToUpdateID").value.length <= 0) {
+                alert("No PID supplied");
+                return;
+            }
+
+            setTimeout(function() {
+                var pid = document.getElementById("progToUpdateID").value;
+
+                var data = {}
+                var frequency = { "type": 0, "param": 0 };
+                var wateringTimes = [];
+
+                if(document.getElementById("progToUpdateName").value.length > 0) {
+                    data.name = document.getElementById("progToUpdateName").value;
+                }
+
+                data.active = document.getElementById("progToUpdateActive").checked;
+
+                if(document.getElementById("progToUpdateNextRun").value.length > 0) {
+                    data.nextRun = document.getElementById("progToUpdateNextRun").value;
+                }
+                if(document.getElementById("progToUpdateStartTime").value.length > 0) {
+                    data.startTime = document.getElementById("progToUpdateStartTime").value;
+                }
+                data.ignoreInternetWeather = document.getElementById("ignoreInternetWeather").checked;
+
+                if(document.getElementById("progToUpdateCycles").value.length > 0) {
+                    data.cycles = document.getElementById("progToUpdateCycles").value;
+                }
+                if(document.getElementById("progToUpdateSoak").value.length > 0) {
+                    data.soak = document.getElementById("progToUpdateSoak").value;
+                }
+
+                data.cs_on = document.getElementById("progToUpdateCSON").checked;
+
+                if(document.getElementById("progToUpdateDelay").value.length > 0) {
+                    data.delay = document.getElementById("progToUpdateDelay").value;
+                }
+
+                data.delay_on = document.getElementById("progToUpdateDelayOn").checked;
+                data.useWaterSense = document.getElementById("progToUpdateUseWaterSense").checked;
+
+                if(document.getElementById("progToUpdateFreqType").value.length > 0) {
+                    frequency.type = document.getElementById("progToUpdateFreqType").value;
+                }
+                if(document.getElementById("progToUpdateFreqParam").value.length > 0) {
+                    frequency.param = document.getElementById("progToUpdateFreqParam").value;
+                }
+
+                wateringTimes.push(buildWateringTimeObj(1, "progToUpdateWTZ01", data.useWaterSense));
+                wateringTimes.push(buildWateringTimeObj(2, "progToUpdateWTZ02", data.useWaterSense));
+                wateringTimes.push(buildWateringTimeObj(3, "progToUpdateWTZ03", data.useWaterSense));
+                wateringTimes.push(buildWateringTimeObj(4, "progToUpdateWTZ04", data.useWaterSense));
+                wateringTimes.push(buildWateringTimeObj(5, "progToUpdateWTZ05", data.useWaterSense));
+                wateringTimes.push(buildWateringTimeObj(6, "progToUpdateWTZ06", data.useWaterSense));
+                wateringTimes.push(buildWateringTimeObj(7, "progToUpdateWTZ07", data.useWaterSense));
+                wateringTimes.push(buildWateringTimeObj(8, "progToUpdateWTZ08", data.useWaterSense));
+                wateringTimes.push(buildWateringTimeObj(9, "progToUpdateWTZ09", data.useWaterSense));
+                wateringTimes.push(buildWateringTimeObj(10, "progToUpdateWTZ10", data.useWaterSense));
+                wateringTimes.push(buildWateringTimeObj(11, "progToUpdateWTZ11", data.useWaterSense));
+                wateringTimes.push(buildWateringTimeObj(12, "progToUpdateWTZ12", data.useWaterSense));
+
+                if(!isMapEmpty(frequency)) {
+                    data.frequency = frequency;
+                }
+                if(wateringTimes.length > 0) {
+                    data.wateringTimes = wateringTimes;
+                }
+
+                data.fromDevWebInterface = true;
+
+                var url = create ? "program" : ("program/" + pid);
+
+                xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("POST", url, false);
+                xmlhttp.setRequestHeader("Content-type","text/plain");
+                xmlhttp.send(JSON.stringify(data));
+                console.log(JSON.stringify(data));
+                alert(xmlhttp.responseText);
+            }, 0);
+        }
+
+        function buildWateringTimeObj(id, elemId, waterSense) {
+            var data = {
+                    id: id,
+                    active: document.getElementById(elemId + "Act").checked
+                };
+
+            if(!waterSense) {
+                data.duration = 0;
+                var value = document.getElementById(elemId).value.trim();
+                if(value.length > 0) {
+                    data.duration = parseInt(value);
+                    if(isNaN(data.duration)) {
+                        data.duration = 0;
+                    }
+                }
+            }
+
+            return data;
+        }
+
+        function postProgramDelete() {
+            if(document.getElementById("progToDelID").value.length <= 0) {
+                return;
+            }
+            var pid = document.getElementById("progToDelID").value;
+
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "program/" + pid + "/delete", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({
+                pid: pid
+            }));
+            alert(xmlhttp.responseText);
+        }
+
+        function postProgramStart() {
+            if(document.getElementById("progToStartID").value.length <= 0) {
+                return;
+            }
+
+            var pid = document.getElementById("progToStartID").value;
+
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "program/" + pid + "/start", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({
+                pid: pid
+            }));
+            alert(xmlhttp.responseText);
+        }
+
+        function postProgramStop() {
+            if(document.getElementById("progToStopID").value.length <= 0) {
+                return;
+            }
+
+            var pid = document.getElementById("progToStopID").value;
+
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "program/" + pid + "/stop", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({
+                pid: pid
+            }));
+            alert(xmlhttp.responseText);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postZoneStart() {
+            var id = document.getElementById("waterZoneID").value;
+            var time = document.getElementById("waterZoneTime").value;;
+
+            if(id.length == 0 || time.length == 0) {
+                return;
+            }
+
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "zone/" + id + "/start", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({time: time}));
+
+            alert(xmlhttp.responseText);
+        }
+
+        function postZoneStop() {
+            if(document.getElementById("zoneToStopID").value.length <= 0) {
+                return;
+            }
+
+            var zid = document.getElementById("zoneToStopID").value;
+
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "zone/" + zid + "/stop", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({
+                zid: zid
+            }));
+            alert(xmlhttp.responseText);
+        }
+
+        function postZoneProperties() {
+
+            if(document.getElementById("zoneID").value.length <= 0) {
+                return;
+            }
+
+            var zid = document.getElementById("zoneID").value;
+            var data = {}
+
+            if(document.getElementById("zoneName").value.length > 0) {
+                data.name = document.getElementById("zoneName").value;
+            }
+            if(document.getElementById("zoneType").value.length > 0) {
+                data.type = document.getElementById("zoneType").value;
+            }
+
+            data.active = document.getElementById("zoneActive").checked;
+            data.internet = document.getElementById("zoneInternet").checked;
+            data.history = document.getElementById("zoneHistory").checked;
+
+            if(document.getElementById("zoneSavings").value.length > 0) {
+                data.savings = document.getElementById("zoneSavings").value;
+            }
+            if(document.getElementById("zoneSlope").value.length > 0) {
+                data.slope = document.getElementById("zoneSlope").value;
+            }
+            if(document.getElementById("zoneSun").value.length > 0) {
+                data.sun = document.getElementById("zoneSun").value;
+            }
+            if(document.getElementById("zoneSoil").value.length > 0) {
+                data.soil = document.getElementById("zoneSoil").value;
+            }
+
+            data.master = document.getElementById("zoneMaster").checked;
+            if(document.getElementById("zoneMasterBefore").value.length > 0) {
+                data.before = document.getElementById("zoneMasterBefore").value;
+            }
+            if(document.getElementById("zoneMasterAfter").value.length > 0) {
+                data.after = document.getElementById("zoneMasterAfter").value;
+            }
+
+            if(document.getElementById("zoneAdvanced").checked) {
+                var advancedData = {};
+
+                advancedData.soilIntakeRate = document.getElementById("zoneAdvanceSoilIntakeRate").value.trim();
+                advancedData.maxAllowedDepletion = document.getElementById("zoneAdvanceMaxAllowedDepletion").value.trim();
+                advancedData.rootDepth = document.getElementById("zoneAdvanceRootDepth").value.trim();
+                advancedData.isTallPlant = document.getElementById("zoneAdvanceTallPlant").checked;
+                advancedData.precipitationRate = document.getElementById("zoneAdvancePrecipRate").value.trim();
+
+                advancedData.appEfficiency = document.getElementById("zoneAdvanceAppEfficiency").value.trim();
+                advancedData.allowedSurfaceAcc = document.getElementById("zoneAdvanceAllowedSurfaceAcc").value.trim();
+                advancedData.fieldCapacity = document.getElementById("zoneAdvanceFieldCapacity").value.trim();
+                advancedData.permWilting = document.getElementById("zoneAdvancePermWilting").value.trim();
+
+                advancedData.detailedMonthsKc = document.getElementById("zoneAdvanceDetailedMonthsKc").value.trim().split(",");
+                alert(advancedData.detailedMonthsKc);
+                if(advancedData.detailedMonthsKc.length != 12) {
+                    delete advancedData.detailedMonthsKc;
+                }
+
+                for(var key in advancedData) {
+                    if(advancedData.hasOwnProperty(key)) {
+                    var value = advancedData[key];
+                    if(typeof value != "boolean" && value.length == 0)
+                        delete advancedData[key];
+                    }
+                }
+                data.advanced = advancedData;
+            }
+
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "zone/" + zid + "/properties", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify(data));
+            alert(xmlhttp.responseText);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function getWateringLog(simulated)
+        {
+            var startDate = document.getElementById(simulated ? "waterLogSimStartDate" : "waterLogStartDate").value.trim();
+            var noOfDays = +document.getElementById(simulated ? "waterLogSimNoOfDays" : "waterLogNoOfDays").value.trim();
+
+            var url = "watering/log" + (simulated ? "/simulated" : "");
+            if (startDate.length > 0) {
+                url += "/" + startDate;
+
+                if (noOfDays > 0) {
+                    url += "/" + noOfDays;
+                }
+            }
+            url += "?format";
+
+            window.location.href = url;
+        }
+
+        function getWateringLogDetails(simulated)
+        {
+            var startDate = document.getElementById(simulated ? "waterLogSimDetailsStartDate" : "waterLogDetailsStartDate").value.trim();
+            var noOfDays = +document.getElementById(simulated ? "waterLogSimDetailsNoOfDays" : "waterLogDetailsNoOfDays").value.trim();
+
+            var url = "watering/log" + (simulated ? "/simulated" : "") +"/details";
+            if (startDate.length > 0) {
+                url += "/" + startDate;
+
+                if (noOfDays > 0) {
+                    url += "/" + noOfDays;
+                }
+            }
+            url += "?format";
+
+            window.location.href = url;
+        }
+
+        function postWateringStopAll() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "watering/stopall", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({
+                all: true
+            }));
+            alert(xmlhttp.responseText);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postRainDelay() {
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "restrictions/raindelay", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify({
+                rainDelay: document.getElementById("rainDelay").value
+            }));
+            alert(xmlhttp.responseText);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postParserActivate() {
+
+            parserID = document.getElementById("parserID").value.trim();
+            parserActivate = document.getElementById("parserActivate").checked;
+
+            if(parserID.length <= 0) {
+                return;
+            }
+
+            var data = {activate: parserActivate};
+
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "parser/" + parserID + "/activate", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify(data));
+            alert(xmlhttp.responseText);
+        }
+
+        function postParserParams() {
+
+            var parserID = document.getElementById("parserIDParams").value.trim();
+            var params = document.getElementById("parserParams").value.trim();
+
+            if(parserID.length <= 0 || params.length <= 0) {
+                return;
+            }
+
+            try {
+                params = JSON.parse(params);
+            } catch(e) {
+                return false;
+            }
+
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "parser/" + parserID + "/params", false);
+            xmlhttp.setRequestHeader("Content-type","text/plain");
+            xmlhttp.send(JSON.stringify(params));
+            alert(xmlhttp.responseText);
+        }
+
+        function postParserRunAll() {
+
+            setTimeout(function() {
+                var parserID = document.getElementById("parserRunAllParserID").value.trim();
+                var parser = document.getElementById("parserRunAllParser").checked;
+                var mixer = document.getElementById("parserRunAllMixer").checked;
+                var simulator = document.getElementById("parserRunAllSimulator").checked;
+
+                var data = {
+                    parser: parser,
+                    mixer: mixer,
+                    simulator: simulator
+                };
+
+                if(parserID.length > 0)
+                {
+                    data.parserID = parseInt(parserID);
+                }
+
+                data = JSON.stringify(data);
+
+                xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("POST", "parser/run", false);
+                xmlhttp.setRequestHeader("Content-type","text/plain");
+                xmlhttp.send(data);
+                alert(xmlhttp.responseText);
+            }, 0);
+        }
+
+        function postParserRun() {
+
+            setTimeout(function() {
+                var parserID = document.getElementById("parserRunID").value.trim();
+                var mixer = document.getElementById("parserRunMixer").checked;
+                var simulator = document.getElementById("parserRunSimulator").checked;
+
+                if(parserID.length <= 0) {
+                    return;
+                }
+
+                var data = {
+                    mixer: mixer,
+                    simulator: simulator
+                };
+                data = JSON.stringify(data);
+
+                xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("POST", "parser/" + parserID + "/run", false);
+                xmlhttp.setRequestHeader("Content-type","text/plain");
+                xmlhttp.send(data);
+                alert(xmlhttp.responseText);
+            }, 0);
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function isMapEmpty(map) {
+            for(var key in map) {
+                if (map.hasOwnProperty(key)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function getProgramIDInfo()
+        {
+            var id = +document.getElementById("progToGetID").value;
+            if (id <= 0 || typeof(id) === "undefined")
+                id = 1;
+
+            window.location.href = "program/" + id + "?format";
+        }
+
+        //---------------------------------------------------------------------------------------
+        //
+        function postDevImportWaterLog() {
+            postUploadFile("importWaterLogFile", "importWaterLogStatus", "dev/import/waterlog");
+        }
+
+        function postDevImportParser() {
+            postUploadFile("importParserFile", "importParserStatus", "dev/import/parser");
+        }
+
+        function postUploadFile(fileElemId, statusElemId, urlPath) {
+
+
+            var files = document.getElementById(fileElemId).files;
+            var status = document.getElementById(statusElemId);
+            if(!files || files.length < 0) {
+                return;
+            }
+
+            var file = files[0];
+            var req = new XMLHttpRequest();
+
+            req.onprogress = function(e) { status.innerHTML = "Status: Uploading " + Math.round((e.loaded/e.total) * 100) + "%"; };
+            req.onloadend = function(e) { status.innerHTML = "Status: Uploading complete. Processing: " + req.responseText; };
+            req.onerror = function(e) { status.innerHTML = "Status: Upload error, aborted."; };
+
+            var reader = new FileReader();
+            reader.onprogress = function(e) { status.innerHTML = "Status: Reading file " + Math.round((e.loaded/e.total) * 100) + "%"; };
+            reader.onloadend = function() {
+                if(!reader.result) {
+                    status.innerHTML = "Status: Error reading file";
+                    return;
+                }
+                status.innerHTML = "Status: Uploading ";
+
+                var binary = new Uint8Array(reader.result);
+
+                req.open("POST", urlPath, false);
+                req.setRequestHeader("Content-Type", file.type);
+                req.setRequestHeader("Content-Disposition", "inline; filename=" + file.name)
+                req.send(binary);
+            };
+
+            status.innerHTML = "Status: Reading file";
+            reader.readAsArrayBuffer(file);
+        }
+
+</script>
+<script type="text/javascript">
+        function buildTZSelect(jsonData)
+        {
+            var s = document.getElementById("timezoneSelect")
+            if (!s || !jsonData || typeof s === "undefined")
+                return;
+
+            var sortedData = [];
+            //Sort the keys
+            for (var z in jsonData)
+                sortedData.push(z);
+
+            sortedData.sort();
+
+            for (var i = 0; i < sortedData.length; i++)
+            {
+                var o = document.createElement('option');
+                o.value = o.textContent = sortedData[i];
+                s.appendChild(o);
+            }
+        }
+
+        function loadTimeZoneDB()
+        {
+            var r = new XMLHttpRequest();
+            r.onreadystatechange = function() {
+                    if ((r.readyState == 4)&& (r.status == 200))
+                        buildTZSelect(JSON.parse(r.responseText));
+            };
+            r.open("GET", "dev/timezonedb.json", true)
+            r.send();
+        }
+    </script>
+</head>
+<body>
+    <h1>Sprinkler API</h1>
+
+    <h2>Not Authenticated</h2>
+    <ul>
+        <li><a href='apiVer'>GET <b>apiVer</b></a></li>
+        <li><a href='auth/login' onclick="postAuthLogin(); return false;">POST <b>auth/login</b></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Password: <input type="text" id="password" value=""/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Remember: <input type="checkbox" id="remember" checked/>
+        </li>
+        <li><a href='auth/check' onclick="postAuthCheck(); return false;">POST <b>auth/check</b></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Password: <input type="text" id="passwordForCheck" value=""/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        </li>
+    </ul>
+
+    <h2>Authenticated</h2>
+    <h2>/auth</h2>
+    <ul>
+        <li><a href='auth/change' onclick="postAuthChange(); return false;">POST <b>auth/change</b></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Old: <input type="text" id="oldPassword" value=""/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            New: <input type="text" id="newPassword" value=""/><br/>
+            Checksum: <input type="text" id="newChecksum" value="" style="width: 800px;"/>
+        </li>
+    </ul>
+
+    <h2>/provision</h2>
+    <ul>
+        <li><a href='provision?format'>GET <b>provision</b></a></li>
+        <li><a href='provision?format' onclick="postProvision(); return false;">POST <b>provision</b></a>
+                <ul>
+
+                    <li> <b>System (optional): </b><br/>
+                        use master valve : <input type="checkbox" id="useMasterValve"/><br/>
+                        ...
+                    </li>
+                    <li><b>Location (optional will set wizardHasRun = true if timezone is sent) :</b><br/>
+                        name: <input type="text" id="locationName" placeholder="Tampa_FL"/><br/>
+                        latitude: <input type="text" id="latitude" placeholder="27.944673"/><br/>
+                        longitude: <input type="text" id="longitude" placeholder="-82.444367"/><br/>
+                        elevation: <input type="text" id="elevation" placeholder="6"/><br/>
+                        krs: <input type="text" id="krs" placeholder="0.19"/><br/>
+                        timezone: <select name="timezone" id="timezoneSelect"></select><br/><br/>
+                        ...
+                    </li>
+                </ul>
+        </li>
+        <li><a href='provision/name'>GET <b>provision/name</b></a></li>
+        <li><a href='provision/name?format' onclick="postProvisionName(); return false;">POST <b>provision/name</b></a>
+            name: <input type="text" id="netName" placeholder="myRainMachine"/>
+        <li><a href='provision/wifi?format'>GET <b>provision/wifi</b></a></li>
+        <li><a href='provision/wifi/scan?format'>GET <b>provision/wifi/scan</b></a></li>
+        <li><a href='provision/wifi/settings?format' onclick="postProvisionWifiSettings(); return false;">POST <b>provision/wifi/settings</b></a><br>
+            ssid: <input type="text" id="ssidName" placeholder="AP Name"/>
+            encryption: <input type="text" id="ssidEncryption" value="" placeholder="psk | psk2 | none"/>
+            key: <input type="text" id="ssidKey" placeholder="password"/><br>
+            networkType: <input type="text" id="networkType" placeholder="dhcp/static"/>
+            ipaddr: <input type="text" id="addressIP" placeholder="192.168.12.222"/>
+            netmask: <input type="text" id="addressNetmask" placeholder="255.255.255.0"/>
+            gateway: <input type="text" id="addressGateway" placeholder="192.168.12.1"/>
+            dns: <input type="text" id="addressDNS" placeholder="8.8.8.8"/>
+        </li>
+
+        <li><a href='provision/cloud?format'>GET <b>provision/cloud</b></a></li>
+        <li><a href='provision/cloud?format' onclick="postProvisionCloudEnable(); return false;">POST <b>provision/cloud/enable</b></a></li>
+        <li><a href='provision/cloud?format' onclick="postProvisionCloudEmail(); return false;">POST <b>provision/cloud/email</b></a></li>
+        <li><a href='provision/cloud?format' onclick="postProvisionCloud(); return false;">POST <b>provision/cloud</b></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            E-mail: <input type="text" id="cloudEmail" value="" placeholder="abc@gmail.com"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            pendingEmail: <input type="text" id="cloudPendingEmail" value="" placeholder="def@gmail.com"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Enable: <input type="checkbox" id="cloudEnable" value=""/>
+        </li>
+        <li><a href='provision/cloud/reset?format' onclick="postProvisionCloudReset(); return false;">POST <b>provision/cloud/reset</b></a></li>
+        <li>
+            <a href='provision/reset?format' onclick="postProvisionReset(); return false;">POST <b>provision/reset</b></a>
+            Restart: <input type="checkbox" id="provisionResetRestart" checked/>
+        </li>
+        <hr>
+         <li><a href='provision' onclick="postProvisionLedBrightness(); return false;">Example: POST <b>LED Brightness</b></a>
+            <input type="text" id="ledBrightness" placeholder="80"/></li>
+         <li><a href='provision' onclick="postProvisionRainSensitivity(); return false;">Example: POST <b>Rain Sensitivity</b></a>
+            <input type="text" id="rainSensitivity" placeholder="0.5"/></li>
+         <li><a href='provision' onclick="postProvisionWsDays(); return false;">Example: POST <b>Ws Days</b></a>
+            <input type="text" id="wsDays" placeholder="5"/></li>
+    </ul>
+
+    <h2>/dailystats</h2>
+    <ul>
+        <li><a href='dailystats?format'>GET <b>dailystats</b></a></li>
+        <li><a href='dailystats/2014-11-11?format'>GET <b>dailystats/2014-11-11</b></a></li>
+        <li><a href='dailystats/details?format'>GET <b>dailystats/details</b></a></li>
+    </ul>
+
+    <h2>/restrictions</h2>
+    <ul>
+        <li><a href='restrictions/global?format'>GET <b>restrictions/global</b></a></li>
+        <li><a href='restrictions/global?format' onclick="postRestrictionsGlobal(); return false;">POST <b>restrictions/global</b></a><br/>
+            <table>
+                <tr>
+                    <td>hotDaysExtraWatering:</td><td><input type="checkbox" id="hotDaysExtraWatering"></td>
+                </tr>
+                <tr>
+                    <td>freezeProtectEnabled:</td><td><input type="checkbox" id="freezeProtectEnabled"></td>
+                    <td>freezeProtectTemp:</td><td><input type="text" id="freezeProtectTemp" value="-3"/></td>
+                </tr>
+                <tr>
+                    <td>noWaterInWeekDays:</td><td><input type="text" id="noWaterInWeekDays" value="0011010"/></td>
+                </tr>
+                <tr>
+                    <td>noWaterInMonths:</td><td><input type="text" id="noWaterInMonths" value="111000000011"/></td>
+                </tr>
+                <tr>
+                    <td>rainDelayStartTime:</td><td><input type="text" id="rainDelayStartTime" value="5"/></td>
+                    <td>rainDelayDuration:</td><td><input type="text" id="rainDelayDuration" value="10"/></td>
+                </tr>
+            </table>
+        </li>
+        <hr>
+        <li><a href='restrictions/hourly?format'>GET <b>restrictions/hourly</b></a></li>
+        <li><a href='restrictions/hourly?format' onclick="postRestrictionsHourly(); return false;">POST <b>restrictions/hourly</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Day Start Minute: <input type="text" id="hourlyRestrictionStart" value="" placeholder="120 (minutes)"/>&nbsp;&nbsp;
+            Duration: <input type="text" id="hourlyRestrictionDuration" value="" placeholder="60 (minutes)"/>&nbsp;&nbsp;
+            Week Days: <input type="text" id="hourlyRestrictionWeekDays" value="" placeholder="0000000 (MTWTFSS)"/>&nbsp;&nbsp;
+        </li>
+        <li><a href='restrictions/hourly/N/delete?format' onclick="postRestrictionsHourlyDelete(); return false;">POST <b>restrictions/hourly/N/delete</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            Hourly Restriction ID: <input type="text" id="hourlyRestrictionToDelID" value="" placeholder="1"/>
+        </li>
+        <hr>
+        <li><a href='restrictions/raindelay?format'>GET <b>raindelay</b></a></li>
+        <li><a href='restrictions/raindelay?format' onclick="postRainDelay(); return false;">POST <b>raindelay</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Delay(days): <input type="text" id="rainDelay" value="" placeholder="1"/>
+        </li>
+
+    </ul>
+
+    <h2>/program</h2>
+    <ul>
+        <li><a href='program?format'>GET <b>program</b></a></li>
+        <li><a href='program/1?format' onclick='getProgramIDInfo(); return false;'>GET <b>program/N</b></a>
+             &nbsp;&nbsp;&nbsp;&nbsp;
+            Program ID: <input type="text" id="progToGetID" value="" placeholder="1"/>
+        </li>
+        <li><a href='program/?format' onclick="postProgramCreateUpdate(true); return false;">POST <b>program</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <a href='program/1?format' onclick="postProgramCreateUpdate(false); return false;">POST <b>program/N</b></a><br/>
+            <table>
+                <tr>
+                    <td>uid</td><td><input type="text" value="" id="progToUpdateID"></td>
+                    <td>name</td><td><input type="text" value="" id="progToUpdateName"></td>
+                    <td>active</td><td><input type="checkbox" id="progToUpdateActive"></td>
+                </tr>
+                <tr>
+                    <td>nextRun</td><td><input type="text" value="" placeholder="2014-10-23" id="progToUpdateNextRun"></td>
+                    <td>startTime</td><td><input type="text" value="" placeholder="hh:mm" id="progToUpdateStartTime"></td>
+                    <td>ingnore Internet Weather</td><td><input type="checkbox" id="ignoreInternetWeather"></td>
+                </tr>
+                <tr>
+                    <td>cycles</td><td><input type="text" value="" id="progToUpdateCycles"></td>
+                    <td>soak</td><td><input type="text" value="" id="progToUpdateSoak"></td>
+                    <td>cs_on</td><td><input type="checkbox"  id="progToUpdateCSON"></td>
+                </tr>
+                <tr>
+                    <td>delay</td><td><input type="text" value="" id="progToUpdateDelay"></td>
+                    <td>delay_on</td><td><input type="checkbox" id="progToUpdateDelayOn"></td>
+                    <td>useWaterSense</td><td><input type="checkbox" id="progToUpdateUseWaterSense"></td>
+                </tr>
+                <tr>
+                    <td>frequency type</td><td><input type="text" value="" id="progToUpdateFreqType"></td>
+                    <td>frequency param</td><td><input type="text" value="" id="progToUpdateFreqParam" placeholder="0 | 0/1 | N | 0010010010"></td>
+                </tr>
+                <tr>
+                    <td>WT z01</td><td><input type="checkbox" id="progToUpdateWTZ01Act"><input type="text" value="" id="progToUpdateWTZ01" placeholder="seconds"></td>
+                    <td>WT z02</td><td><input type="checkbox" id="progToUpdateWTZ02Act"><input type="text" value="" id="progToUpdateWTZ02" placeholder="seconds"></td>
+                    <td>WT z03</td><td><input type="checkbox" id="progToUpdateWTZ03Act"><input type="text" value="" id="progToUpdateWTZ03" placeholder="seconds"></td>
+                    <td>WT z04</td><td><input type="checkbox" id="progToUpdateWTZ04Act"><input type="text" value="" id="progToUpdateWTZ04" placeholder="seconds"></td>
+                    <td>WT z05</td><td><input type="checkbox" id="progToUpdateWTZ05Act"><input type="text" value="" id="progToUpdateWTZ05" placeholder="seconds"></td>
+                    <td>WT z06</td><td><input type="checkbox" id="progToUpdateWTZ06Act"><input type="text" value="" id="progToUpdateWTZ06" placeholder="seconds"></td>
+                </tr>
+                <tr>
+                    <td>WT z07</td><td><input type="checkbox" id="progToUpdateWTZ07Act"><input type="text" value="" id="progToUpdateWTZ07" placeholder="seconds"></td>
+                    <td>WT z08</td><td><input type="checkbox" id="progToUpdateWTZ08Act"><input type="text" value="" id="progToUpdateWTZ08" placeholder="seconds"></td>
+                    <td>WT z09</td><td><input type="checkbox" id="progToUpdateWTZ09Act"><input type="text" value="" id="progToUpdateWTZ09" placeholder="seconds"></td>
+                    <td>WT z10</td><td><input type="checkbox" id="progToUpdateWTZ10Act"><input type="text" value="" id="progToUpdateWTZ10" placeholder="seconds"></td>
+                    <td>WT z11</td><td><input type="checkbox" id="progToUpdateWTZ11Act"><input type="text" value="" id="progToUpdateWTZ11" placeholder="seconds"></td>
+                    <td>WT z12</td><td><input type="checkbox" id="progToUpdateWTZ12Act"><input type="text" value="" id="progToUpdateWTZ12" placeholder="seconds"></td>
+                </tr>
+            </table>
+        </li>
+        <hr/>
+
+        <li><a href='program/1/delete?format' onclick="postProgramDelete(); return false;">POST <b>program/N/delete</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            Program ID: <input type="text" id="progToDelID" value="" placeholder="1"/>
+        </li>
+        <li><a href='program/nextrun?format'>GET <b>program/nextrun</b></a></li>
+        <li><a href='program/1/start?format' onclick="postProgramStart(); return false;">POST <b>program/N/start</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Program ID: <input type="text" id="progToStartID" value="" placeholder="1"/>
+        </li>
+        <li><a href='program/1/stop?format' onclick="postProgramStop(); return false;">POST <b>program/N/stop</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Program ID: <input type="text" id="progToStopID" value="" placeholder="1"/>
+        </li>
+    </ul>
+
+    <h2>/zone</h2>
+    <ul>
+        <li><a href='zone?format'>GET <b>zone</b></a></li>
+        <li><a href='zone/2?format'>GET <b>zone/N</b></a></li>
+        <li><a href='zone/N/start?format' onclick="postZoneStart(); return false;">POST <b>zone/N/start</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            ID: <input type="text" id="waterZoneID" value="" placeholder="1"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Time: <input type="text" id="waterZoneTime" value="" placeholder="10"/>
+        </li>
+        <li><a href='zone/N/stop?format' onclick="postZoneStop(); return false;">POST <b>zone/N/stop</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Zone ID: <input type="text" id="zoneToStopID" value="" placeholder="1"/>
+        <li><a href='zone/properties?format'>GET <b>zone/properties</b></a></li>
+        <li><a href='zone/2/properties?format'>GET <b>zone/N/properties</b></a></li>
+        <li><a href='zone/N/properties?format' onclick="postZoneProperties(); return false;">POST <b>zone/N/properties</b></a><br/>
+            <table>
+                <tr>
+                    <td>uid</td><td><input type="text" value="" id="zoneID"></td>
+                    <td>name</td><td><input type="text" value="" id="zoneName"></td>
+                    <td>type</td><td><input type="text" value="" id="zoneType"></td>
+                    <td align="right"><input type="checkbox" id="zoneActive"></td><td>active</td>
+                    <td align="right"><input type="checkbox" id="zoneInternet"></td><td>internet</td>
+                    <td align="right"><input type="checkbox" id="zoneHistory"></td><td>history</td>
+                </tr>
+                <tr>
+                    <td>savings</td><td><input type="text" value="" id="zoneSavings"></td>
+                    <td>slope</td><td><input type="text" value="" id="zoneSlope"></td>
+                    <td>sun</td><td><input type="text" value="" id="zoneSun"></td>
+                    <td>soil</td><td><input type="text" value="" id="zoneSoil"></td>
+                </tr>
+                <tr>
+                    <td align="right"><input type="checkbox" id="zoneMaster"></td><td>master</td>
+                    <td>before</td><td><input type="text" value="" id="zoneMasterBefore"></td>
+                    <td>after</td><td><input type="text" value="" id="zoneMasterAfter"></td>
+                </tr>
+            </table>
+            <div><input type="checkbox" id="zoneAdvanced"/> Water Sense Properties</div>
+            <table id="zoneAdvancedTable" style="display: none;">
+                <tr>
+                    <td>SoilIntakeRate</td><td><input type="text" value="" id="zoneAdvanceSoilIntakeRate"/></td>
+                    <td>MaxAllowedDepletion</td><td><input type="text" value="" id="zoneAdvanceMaxAllowedDepletion"/></td>
+                    <td>RootDepth</td><td><input type="text" value="" id="zoneAdvanceRootDepth"/></td>
+                    <td align="right"><input type="checkbox" id="zoneAdvanceTallPlant"/></td><td>isTallPlant</td>
+                    <td>PrecipRate</td><td><input type="text" value="" id="zoneAdvancePrecipRate"/></td>
+                </tr>
+                <tr>
+                    <td>AppEfficiency</td><td><input type="text" value="" id="zoneAdvanceAppEfficiency"/></td>
+                    <td>AllowedSurfaceAcc</td><td><input type="text" value="" id="zoneAdvanceAllowedSurfaceAcc"/></td>
+                    <td>FieldCapacity</td><td><input type="text" value="" id="zoneAdvanceFieldCapacity"/></td>
+                    <td>PermWilting</td><td><input type="text" value="" id="zoneAdvancePermWilting"/></td>
+                    <td>DetailedMonthsKc</td><td><input type="text" value="" placeholder="J,F,M,A,J,J,A,S,O,N,D" id="zoneAdvanceDetailedMonthsKc"/></td>
+                </tr>
+            </table>
+        </li>
+    </ul>
+
+    <h2>/watering</h2>
+    <ul>
+        <li><a href='watering/zone?format'>GET <b>watering/zone</b></a></li>
+        <li><a href='watering/program?format'>GET <b>watering/program</b></a></li>
+        <li><a href='watering/queue?format'>GET <b>watering/queue</b></a></li>
+        <li><a href='watering/past?format'>GET <b>watering/past</b></a></li>
+        <li><a href='watering/available?format'>GET <b>watering/available</b></a></li>
+        <li><a href='watering/log/2014-10-01/30?format' onclick='getWateringLog(false); return false;'>GET <b>watering/log/2014-10-01/30</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Start Date: <input type="text" id="waterLogStartDate" value="" placeholder="2014-10-01"/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Number of Days: <input type="text" id="waterLogNoOfDays" value="" placeholder="30"/>
+        </li>
+        <li><a href='watering/log/details/2014-10-01/30?format' onclick='getWateringLogDetails(false); return false;'>GET <b>watering/log/details/2014-10-01/30</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Start Date: <input type="text" id="waterLogDetailsStartDate" value="" placeholder="2014-10-01"/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Number of Days: <input type="text" id="waterLogDetailsNoOfDays" value="" placeholder="30"/>
+        </li>
+        <li><a href='watering/log/simulated/2014-12-01/30?format' onclick='getWateringLog(true); return false;'>GET <b>watering/log/simulated/2014-12-01/30</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Start Date: <input type="text" id="waterLogSimStartDate" value="" placeholder="2014-12-01"/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Number of Days: <input type="text" id="waterLogSimNoOfDays" value="" placeholder="30"/>
+        </li>
+        <li><a href='watering/log/simulated/details/2014-12-01/30?format' onclick='getWateringLogDetails(true); return false;'>GET <b>watering/log/simulated/details/2014-12-01/30</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Start Date: <input type="text" id="waterLogSimDetailsStartDate" value="" placeholder="2014-12-01"/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Number of Days: <input type="text" id="waterLogSimDetailsNoOfDays" value="" placeholder="30"/>
+        </li>
+        <li><a href='watering/stopall?format' onclick="postWateringStopAll(); return false;">POST <b>watering/stopall</b></a></li>
+    </ul>
+
+    <h2>/parser</h2>
+    <ul>
+        <li><a href='parser?format'>GET <b>parser</b></a></li>
+        <li><a href='parser/1?format'>GET <b>parser/N</b></a></li>
+        <li><a href='parser/1/data?format'>GET <b>parser/N/data</b></a>
+        <li><a href='parser/1/data/2014-11-19?format'>GET <b>parser/N/data/2014-11-19</b></a></li>
+        <li><a href='parser/1/data/2014-09-01/120?format'>GET <b>parser/N/data/2014-09-01/120</b></a></li>
+        <li><a href='parser/N/activate?format' onclick="postParserActivate(); return false;">POST <b>parser/N/activate</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;UID: <input type="text" id="parserID" value="" placeholder="1"/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Activate: <input type="checkbox" id="parserActivate"/>
+        </li>
+        <li><a href='parser/N/params?format' onclick="postParserParams(); return false;">POST <b>parser/N/params</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;UID: <input type="text" id="parserIDParams" value="" placeholder="1"/><br/>
+            Example CIMIS params:<br/>
+            <textarea id="parserParams" style="width: 500px; height: 110px;">
+    {
+        "customStation": true,
+        "station": 2,
+        "historicDays": 5,
+        "appKey": "523cf689-7ba6-47bd-a2be-6dc1c1ba9afb"
+    }
+            </textarea>
+        </li>
+        <li><a href='parser/run?format' onclick="postParserRunAll(); return false;">POST <b>parser/run</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ParserID: <input type="text" id="parserRunAllParserID" value="" placeholder="1 (or empty for all)"/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Parser: <input type="checkbox" id="parserRunAllParser" checked/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Mixer: <input type="checkbox" id="parserRunAllMixer" checked/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Simulator: <input type="checkbox" id="parserRunAllSimulator" checked/>
+        </li>
+        <!--li><a href='parser/N/run?format' onclick="postParserRun(); return false;">POST <b>parser/N/run</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;UID: <input type="text" id="parserRunID" value="" placeholder="1 (or empty for all)"/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Mixer: <input type="checkbox" id="parserRunMixer" checked/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Simulator: <input type="checkbox" id="parserRunSimulator" checked/>
+        </li-->
+    </ul>
+    <h2>/mixer</h2>
+    <ul>
+        <li><a href='mixer?format'>GET <b>mixer</b></a></li>
+        <li><a href='mixer/2014-11-19?format'>GET <b>mixer/2014-11-19</b></a></li>
+        <li><a href='mixer/2014-09-01/120?format'>GET <b>mixer/2014-09-01/120</b></a></li>
+    </ul>
+
+    <h2>/diag</h2>
+    <ul>
+        <li><a href='diag?format'>GET <b>diag</b></a></li>
+        <li><a href='diag/upload?format'>GET <b>diag/upload</b></a></li>
+        <li><a href='diag/upload?format' onclick="postDiagUpload(); return false;">POST <b>diag/upload</b></a></li>
+        <li><a href='diag/log' onclick="getDiagLog(); return false;">GET <b>diag/log</b></a></li>
+        <li><a href='diag/log/level?format' onclick="postDiagLogLevel(); return false;">POST <b>diag/log/level</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Level: <input type="text" id="logLevel" value="" placeholder="10-50 DEBUG: 10 INFO: 20  "/>
+        </li>
+    </ul>
+    <h2>/machine</h2>
+    <ul>
+        <li><a href='machine/time?format'>GET <b>time</b></a></li>
+        <li><a href='machine/time?format' onclick="postTime(); return false;">POST <b>time</b></a>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Time: <input type="text" id="timeValue" value="" placeholder="2014-02-06 14:28"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        </li>
+        <br>
+        <li><a href='machine/update?format'>GET <b>update</b></a></li>
+        <li><a href='machine/update?format' onclick="postUpdateCheck(); return false;">POST <b>update/check</b></a></li>
+        <li><a href='machine/update?format' onclick="postUpdate(); return false;">POST <b>update</b></a></li>
+        <li><a href='machine/sysupgrade?format' onclick="postSysUpgrade(); return false;">POST <b>sysupgrade</b></a>
+            <input type="file" id="sysUpgradeFile"> <div id="sysUpgradeStatus">Status: idle</div>
+        </li>
+        <br>
+        <li>
+            <a href='machine/ssh?format' onclick="postSSH(); return false;">POST <b>ssh</b></a>
+            enabled: <input type="checkbox" id="sshEnable"/>
+        </li>
+        <li>
+            <a href='machine/touch?format' onclick="postTouch(); return false;">POST <b>touch</b></a>
+            enabled: <input type="checkbox" id="touchEnable"/>
+        </li>
+        <li>
+            <a href='machine/lightleds?format' onclick="postLightLeds(); return false;">POST <b>lightleds</b></a>
+            enabled: <input type="checkbox" id="lightLedsEnable"/>
+        </li>
+        <br>
+
+        <li><a href='machine/shutdown?format' onclick="postShutdown(); return false;">POST <b>shutdown</b></a></li>
+        <li><a href='machine/reboot?format' onclick="postReboot(); return false;">POST <b>reboot</b></a></li>
+        <li><a href='machine/restart?format' onclick="postRestart(); return false;">POST <b>restart</b></a></li>
+    </ul>
+    <h2>/dev</h2>
+    <ul>
+        <li><a href='dev/import/waterlog?format' onclick="postDevImportWaterLog(); return false;">POST <b>dev/import/waterlog</b></a>
+            <input type="file" id="importWaterLogFile"> <div id="importWaterLogStatus">Status: idle</div>
+        </li>
+        <li><a href='dev/import/parser?format' onclick="postDevImportParser(); return false;">POST <b>dev/import/parser</b></a>
+            <input type="file" id="importParserFile"> <div id="importParserStatus">Status: idle</div>
+        </li>
+    </ul>
+
+    <script>
+        loadTimeZoneDB();
+
+        document.getElementById("zoneAdvanced").addEventListener("change", function() {
+            if(document.getElementById("zoneAdvanced").checked) {
+                document.getElementById("zoneAdvancedTable").style.display = "block";
+            } else {
+                document.getElementById("zoneAdvancedTable").style.display = "none";
+            }
+        });
+    </script>
+</body>
+</html>

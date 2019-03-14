@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RainMachine - Valve Status</title>
+    <style type="text/css">
+        .valve {
+            width: 100px;
+            height: 100px;
+            border: solid 2px #AAAAAA;
+            border-radius: 50px;
+            background-color: #EEEEEE;
+        }
+
+        .valve .time {
+            width: 80px;
+            height: 80px;
+            margin: 10px;
+            text-align: center;
+        }
+
+        .restriction {
+            margin-top: 5px;
+            width: 100px;
+            height: 20px;
+            text-align: center;
+            background-color: #AAFFAA;
+        }
+        .restriction.active {
+            background-color: #EE0000;
+            color: #FFFFFF;
+        }
+
+        .name {
+            margin-top: 10px;
+            width: 100px;
+            text-align: center;
+        }
+
+        .valve.master {
+            border: solid 4px #FF0000;
+        }
+
+        .valve.running {
+            background-color: #AAFFAA;
+        }
+
+        .valve.pending {
+            background-color: #FFFFAA;
+        }
+
+        .valve.inactive {
+            background-color: #FF7777;
+        }
+
+    </style>
+</head>
+<body>
+
+<table>
+    <tr>
+        <td><div id="valve1" class="valve"><div id="time1" class="time">U=0<br/>M=0<br/>R=0<br/>C=0/0</div></div><div id="restriction1" class="restriction">Restriction</div><div id="valve1Name" class="name"></div></td>
+        <td><div id="valve2" class="valve"><div id="time2" class="time">U=0<br/>M=0<br/>R=0<br/>C=0/0</div></div><div id="restriction2" class="restriction">Restriction</div><div id="valve2Name" class="name"></div></td>
+        <td><div id="valve3" class="valve"><div id="time3" class="time">U=0<br/>M=0<br/>R=0<br/>C=0/0</div></div><div id="restriction3" class="restriction">Restriction</div><div id="valve3Name" class="name"></div></td>
+        <td><div id="valve4" class="valve"><div id="time4" class="time">U=0<br/>M=0<br/>R=0<br/>C=0/0</div></div><div id="restriction4" class="restriction">Restriction</div><div id="valve4Name" class="name"></div></td>
+        <td><div id="valve5" class="valve"><div id="time5" class="time">U=0<br/>M=0<br/>R=0<br/>C=0/0</div></div><div id="restriction5" class="restriction">Restriction</div><div id="valve5Name" class="name"></div></td>
+        <td><div id="valve6" class="valve"><div id="time6" class="time">U=0<br/>M=0<br/>R=0<br/>C=0/0</div></div><div id="restriction6" class="restriction">Restriction</div><div id="valve6Name" class="name"></div></td>
+        <td><div id="valve7" class="valve"><div id="time7" class="time">U=0<br/>M=0<br/>R=0<br/>C=0/0</div></div><div id="restriction7" class="restriction">Restriction</div><div id="valve7Name" class="name"></div></td>
+        <td><div id="valve8" class="valve"><div id="time8" class="time">U=0<br/>M=0<br/>R=0<br/>C=0/0</div></div><div id="restriction8" class="restriction">Restriction</div><div id="valve8Name" class="name"></div></td>
+    </tr>
+</table>
+
+<ul>
+    <li>U = User Duration (in seconds)</li>
+    <li>M = Machine Duration (in seconds)</li>
+    <li>R = Remaining time (in seconds)</li>
+    <li>C = Cycle</li>
+</ul>
+
+<pre id="logger" style="margin-top: 20px;"></pre>
+
+<script type="text/javascript">
+    var logger = document.getElementById("logger");
+    logger.innerHTML = "Initializing...";
+
+    function getZoneProperties() {
+        xmlhttp = new XMLHttpRequest();
+
+        xmlhttp.onreadystatechange = function() {
+            if(xmlhttp.readyState == 4) {
+                if(xmlhttp.status == 200) {
+                    logger.innerHTML = xmlhttp.responseText;
+                    displayZoneProperties(JSON.parse(xmlhttp.responseText).zones);
+                    scheduleNextUpdate(true);
+                } else {
+                    scheduleNextUpdate(false);
+                }
+            }
+        }
+
+        xmlhttp.open("GET", "/api/4/zone/properties", true);
+        xmlhttp.send();
+    }
+
+    function getZoneStatus() {
+        xmlhttp = new XMLHttpRequest();
+
+        xmlhttp.onreadystatechange = function() {
+            if(xmlhttp.readyState == 4) {
+                if(xmlhttp.status == 200) {
+                    logger.innerHTML = xmlhttp.responseText;
+                    displayZoneStatus(JSON.parse(xmlhttp.responseText).zones);
+                    scheduleNextUpdate(true);
+                } else {
+                    scheduleNextUpdate(false);
+                }
+            }
+        }
+
+        xmlhttp.open("GET", "/api/4/zone", true);
+        xmlhttp.send();
+    }
+
+    function displayZoneProperties(zones) {
+        if(!zones) {
+            return;
+        }
+        for(var index = 0; index < zones.length; index++) {
+            var zone = zones[index];
+
+            var valveId = "valve" + zone.valveid;
+            var valveElem = document.getElementById(valveId);
+            var valveNameElem = document.getElementById(valveId + "Name");
+
+            if(zone.master) {
+                __addClass(valveElem, "master");
+            } else {
+                __removeClass(valveElem, "master");
+            }
+            if(zone.active != 1) {
+                __addClass(valveElem, "inactive");
+            } else {
+                __removeClass(valveElem, "inactive");
+            }
+
+            valveNameElem.innerHTML = zone.name;
+        }
+    }
+
+    function displayZoneStatus(zones) {
+        if(!zones) {
+            return;
+        }
+        for(var index = 0; index < zones.length; index++) {
+            var zone = zones[index];
+
+            var valveElem = document.getElementById("valve" + zone.uid);
+            var valveTimeElem = document.getElementById("time" + zone.uid);
+            var valveRestrictionElem = document.getElementById("restriction" + zone.uid);
+
+            if(zone.state == 1) {
+                __addClass(valveElem, "running");
+                __removeClass(valveElem, "pending");
+            } else if(zone.state == 2) {
+                __addClass(valveElem, "pending");
+                __removeClass(valveElem, "running");
+            } else {
+                __removeClass(valveElem, "running");
+                __removeClass(valveElem, "pending");
+            }
+
+            if(zone.restriction) {
+                __addClass(valveRestrictionElem, "active");
+            } else {
+                __removeClass(valveRestrictionElem, "active");
+            }
+
+            valveTimeElem.innerHTML = "U=" + zone.userDuration + "<br/>M=" + zone.machineDuration + "<br/>R=" + zone.remaining
+                                    + "<br/>C=" + zone.cycle + "/" + zone.noOfCycles;
+        }
+    }
+
+    function scheduleNextUpdate(success) {
+        setTimeout(getZoneStatus, success ? 1000 : 10000);
+    }
+
+    function __addClass(elem, className) {
+        if(elem.className.indexOf(className) == -1) {
+            if(elem.className.length > 0) {
+                elem.className = elem.className + " " + className;
+            } else {
+                elem.className = className;
+            }
+        }
+    }
+
+    function __removeClass(elem, className) {
+        var class1 = " " + className;
+        var class2 = className + " ";
+        var class3 = className;
+
+        var index = elem.className.indexOf(className = class1);
+        if(index == -1) {
+            index = elem.className.indexOf(className = class2);
+        }
+        if(index == -1) {
+            index = elem.className.indexOf(className = class3);
+        }
+
+        if(index != -1) {
+            elem.className = elem.className.replace(className, "");
+        }
+    }
+
+    getZoneProperties();
+</script>
+</body>
+</html>
