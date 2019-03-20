@@ -17,8 +17,8 @@ class MeteobridgePWS(RMParser):
     parserForecast = False
     parserHistorical = True
     parserEnabled = True
-    parserDebug = True
-    parserInterval = 1 * 3600
+    parserDebug = False
+    parserInterval = 1 * 60
 
     params = {"IP_address": "",
               "username": "",
@@ -86,11 +86,11 @@ class MeteobridgePWS(RMParser):
         wind = float(pwsArray[10])
         # wind = wind / 3.6 # the Meteobridge already reports in mps so conversion is not required
         solarradiation = float(pwsArray[11])  # needs to be converted from watt/sqm*h to Joule/sqm
-        # log.debug(str(temperature) + " " + str(et0) + " " + str(mintemp) + " " + str(maxtemp) +
-        #          " " + str(rh) + " " + str(wind) + " " + str(solarradiation))
 
         if solarradiation is not None:
             solarradiation *= 0.0864
+        # log.debug(str(temperature) + " " + str(et0) + " " + str(mintemp) + " " + str(maxtemp) +
+        #          " " + str(rh) + " " + str(wind) + " " + str(solarradiation))
 
         rain = float(pwsArray[12])
         dewpoint = float(pwsArray[13])
@@ -110,6 +110,7 @@ class MeteobridgePWS(RMParser):
         self.addValue(RMParser.dataType.WIND, timestamp, wind)
         self.addValue(RMParser.dataType.RAIN, timestamp, rain)
         self.addValue(RMParser.dataType.ET0, timestamp, et0)
+        self.addValue(RMParser.dataType.SOLARRADIATION, timestamp, solarradiation)
         # self.addValue(RMParser.dataType.QPF, timestamp, rain) # uncomment to report measured rain as previous day QPF
         self.addValue(RMParser.dataType.DEWPOINT, timestamp, dewpoint)
         self.addValue(RMParser.dataType.PRESSURE, timestamp, pressure)
