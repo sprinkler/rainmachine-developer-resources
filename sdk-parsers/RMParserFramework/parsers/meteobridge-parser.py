@@ -18,7 +18,7 @@ class MeteobridgePWS(RMParser):
     parserHistorical = True
     parserEnabled = True
     parserDebug = False
-    parserInterval = 1 * 60
+    parserInterval = 1 * 3600
 
     params = {"IP_address": "",
               "username": "",
@@ -147,6 +147,7 @@ class MeteobridgePWS(RMParser):
         log.debug("Observations for date: {:d}/{:d}/{:d}, time: {:d}{:d}z Temp: {}, Rain: {}, Wind: {}"
                   .format(yyyy, mm, dd, hour, mins, t, r, w))
 
+
 # if __name__ == "__main__":
-#   p = MeteobridgePWS()
-#   p.perform()
+#    p = MeteobridgePWS()
+#    p.perform()
