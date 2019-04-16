@@ -133,16 +133,19 @@ class DWDParser(RMParser):
                     print(name, len(kml), repr(kml[:50]))
 
                 root = etree.fromstring(kml)
-
+                children = list(root)
                 for child in root:
-                    print (child.tag)
+                    print child.tag
+                    for c in child:
+                        print c.tag
 
-                document = root.find("Document")
-                for subDoc in document:
-                    print(subDoc.child.tag)
+                for element in root.iter():
+                    print((element.tag))
+                    if element.tag is "ForecastTimeSteps":
+                        ForeCastTimeSteps = element
 
-
-
+                for el in ForeCastTimeSteps:
+                    print(el.tag)
 
         except Exception as e:
             log.error("*** Error running DWD parser")
