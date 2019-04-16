@@ -17,7 +17,7 @@
 from RMParserFramework.rmParser import RMParser  # Mandatory include for parser definition
 from RMUtilsFramework.rmLogging import log       # Optional include for logging
 
-import xml.etree.ElementTree as ET
+from lxml import etree
 import zipfile
 
 from RMUtilsFramework.rmTimeUtils import rmTimestampFromDateAsString
@@ -127,12 +127,24 @@ class DWDParser(RMParser):
                 return
             else:
                 log.debug("Successfully loaded the KML file")
-                zf = zipfile.ZipFile(BufferedRandomReader(file), 'r')
-                root = ET.fromstring(zf)
+                kmz = zipfile.ZipFile(BufferedRandomReader(file), 'r')
+                for name in kmz.namelist():
+                    kml = kmz.read(name)
+                    print(name, len(kml), repr(kml[:50]))
+
+                root = etree.fromstring(kml)
+
+                for child in root:
+                    print (child.tag)
+
+                document = root.find("Document")
+                for subDoc in document:
+                    print(subDoc.child.tag)
 
 
 
-        except Exception, e:
+
+        except Exception as e:
             log.error("*** Error running DWD parser")
             log.exception(e)
 
