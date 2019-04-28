@@ -133,19 +133,23 @@ class DWDParser(RMParser):
                     print(name, len(kml), repr(kml[:50]))
 
                 root = etree.fromstring(kml)
+
                 children = list(root)
-                for child in root:
-                    print child.tag
-                    for c in child:
-                        print c.tag
+                for children in root:
+                    print children.tag
+                    for child in children:
+                        print child.tag
+                        for c in child:
+                            print c.tag
+                            for a in c:
+                                print a.tag
 
-                for element in root.iter():
-                    print((element.tag))
-                    if element.tag is "ForecastTimeSteps":
-                        ForeCastTimeSteps = element
 
-                for el in ForeCastTimeSteps:
-                    print(el.tag)
+                ogNSMAP = {'og': 'http://www.opengis.net/kml/2.2'}
+                dwdNSMAP = {'dwd': 'https://opendata.dwd.de/weather/lib/pointforecast_dwd_extension_V1_0.xsd'}
+                for element in root.findall('.//dwd:TimeStep', namespaces=dwdNSMAP):
+                    print(element.tag)
+
 
         except Exception as e:
             log.error("*** Error running DWD parser")
