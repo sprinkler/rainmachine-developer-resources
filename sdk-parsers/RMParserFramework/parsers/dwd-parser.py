@@ -110,6 +110,8 @@ class DWDParser(RMParser):
     params = {"station": None}
     defaultParams = {"station": "10637"}
 
+
+
     def perform(self):
         station = self.params.get("station", None)
         if station is None or station == "":
@@ -130,25 +132,49 @@ class DWDParser(RMParser):
                 kmz = zipfile.ZipFile(BufferedRandomReader(file), 'r')
                 for name in kmz.namelist():
                     kml = kmz.read(name)
-                    print(name, len(kml), repr(kml[:50]))
 
                 root = etree.fromstring(kml)
 
-                children = list(root)
-                for children in root:
-                    print children.tag
-                    for child in children:
-                        print child.tag
-                        for c in child:
-                            print c.tag
-                            for a in c:
-                                print a.tag
+                #children = list(root)
+                #for children in root:
+                #    print children.tag
+                #    for child in children:
+                #        print child.tag
+                #        for c in child:
+                #            print c.tag
+                #            for a in c:
+                #                print a.tag
+
+                ns = {'xmlns': "http://www.opengis.net/kml/2.2",
+                      'dwd': 'https://opendata.dwd.de/weather/lib/pointforecast_dwd_extension_V1_0.xsd'}
+                ognsmap = {'og': 'http://www.opengis.net/kml/2.2'}
+                dwdnsmap = {'dwd': 'https://opendata.dwd.de/weather/lib/pointforecast_dwd_extension_V1_0.xsd'}
+                timestamps = []
+                forecasts = dict()
+
+                # Find all forecasts
+                for element in root.findall('.//dwd:Forecast', ns):
+                    forecasts.update({element.attrib['{https://opendata.dwd.de/weather/lib/pointforecast_dwd_extension_V1_0.xsd}elementName']:element[0].text.split()})
+
+                # Find all timestamps
+                for element in root.findall('.//dwd:TimeStep', namespaces=dwdnsmap):
+                    timestamps.append(element.text)
+
+                tmp = dict()
+                forecastDict = dict()
+
+                for timestep in timestamps:
+                    for measure, values in forecasts.iteritems():
+                        tmp.update({measure: values.pop(0)})
+                    #print tmp
+                    forecastDict.update({timestep: dict(tmp)})
 
 
-                ogNSMAP = {'og': 'http://www.opengis.net/kml/2.2'}
-                dwdNSMAP = {'dwd': 'https://opendata.dwd.de/weather/lib/pointforecast_dwd_extension_V1_0.xsd'}
-                for element in root.findall('.//dwd:TimeStep', namespaces=dwdNSMAP):
-                    print(element.tag)
+                #print forecastDict
+
+                for key, value in forecastDict.iteritems():
+                    print(key, value)
+
 
 
         except Exception as e:
