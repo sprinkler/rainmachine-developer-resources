@@ -126,7 +126,7 @@ class DWDParser(RMParser):
                 return
             else:
                 log.debug("Successfully loaded the KML file")
-                kmz = zipfile.ZipFile(BufferedRandomReader(file), 'r')
+                kmz = zipfile.ZipFile(BufferedRandomReader(datafile), 'r')
                 for name in kmz.namelist():
                     kml = kmz.read(name)
 
