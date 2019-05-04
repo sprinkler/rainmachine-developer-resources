@@ -16,14 +16,16 @@
 
 from RMParserFramework.rmParser import RMParser  # Mandatory include for parser definition
 from RMUtilsFramework.rmLogging import log       # Optional include for logging
+from RMUtilsFramework.rmTimeUtils import rmTimestampFromDateAsString # Timestamps
 
-from lxml import etree
-import zipfile
-
-from RMUtilsFramework.rmTimeUtils import rmTimestampFromDateAsString
+import zipfile  # unzipping the KML file
+from xml.etree import ElementTree # iterating of the extracted XML
 
 from io import BytesIO, SEEK_SET, SEEK_END
 
+# Helper to create a random-access, buffered stream from the zip input stream,
+# credit goes to the user "the-happy-hippo" from StackOverflow:
+# https://stackoverflow.com/questions/23579088/opening-response-from-urllib2-urlopen-on-the-fly-with-zipfile-zipfile
 def _ceil_div(a, b):
     return (a + b - 1) / b
 
@@ -100,6 +102,7 @@ class BufferedRandomReader:
         self._buf.close()
 
 
+# Parser class
 class DWDParser(RMParser):
     parserName = "DWD Parser"
     parserDescription = "Parser for the german \"Deutscher Wetterdienst\". To get station ID please see: https://www.dwd.de/DE/leistungen/opendata/help/stationen/mosmix_stationskatalog.cfg?view=nasPublication&nn=16102"
@@ -110,21 +113,17 @@ class DWDParser(RMParser):
     params = {"station": None}
     defaultParams = {"station": "10637"}
 
-
-
     def perform(self):
         station = self.params.get("station", None)
         if station is None or station == "":
             station = "10637"
             log.debug("No station set, using Frankfurt am Main (%s)" % station)
 
-        url = "http://opendata.dwd.de/weather/local_forecasts/mos/MOSMIX_L/single_stations/" + station + "/kml/MOSMIX_L_LATEST_" + station + ".kmz"
-
-        URLParams = []
+        url = "http://opendata.dwd.de/weather/local_forecasts/mos/MOSMIX_L/single_stations/" + str(station) + "/kml/MOSMIX_L_LATEST_" + str(station) + ".kmz"
 
         try:
-            file = self.openURL(url, URLParams)
-            if file is None:
+            datafile = self.openURL(url)
+            if datafile is None:
                 self.lastKnownError = "Cannot read data from DWD Service."
                 return
             else:
@@ -133,22 +132,14 @@ class DWDParser(RMParser):
                 for name in kmz.namelist():
                     kml = kmz.read(name)
 
-                root = etree.fromstring(kml)
-
-                #children = list(root)
-                #for children in root:
-                #    print children.tag
-                #    for child in children:
-                #        print child.tag
-                #        for c in child:
-                #            print c.tag
-                #            for a in c:
-                #                print a.tag
+                root = ElementTree.fromstring(kml)
 
                 ns = {'xmlns': "http://www.opengis.net/kml/2.2",
                       'dwd': 'https://opendata.dwd.de/weather/lib/pointforecast_dwd_extension_V1_0.xsd'}
-                ognsmap = {'og': 'http://www.opengis.net/kml/2.2'}
-                dwdnsmap = {'dwd': 'https://opendata.dwd.de/weather/lib/pointforecast_dwd_extension_V1_0.xsd'}
+
+                # temporary storage of forecast values
+                tmp = dict()
+                forecastDict = dict()
                 timestamps = []
                 forecasts = dict()
 
@@ -157,25 +148,45 @@ class DWDParser(RMParser):
                     forecasts.update({element.attrib['{https://opendata.dwd.de/weather/lib/pointforecast_dwd_extension_V1_0.xsd}elementName']:element[0].text.split()})
 
                 # Find all timestamps
-                for element in root.findall('.//dwd:TimeStep', namespaces=dwdnsmap):
+                for element in root.findall('.//dwd:TimeStep', namespaces=ns):
                     timestamps.append(element.text)
-
-                tmp = dict()
-                forecastDict = dict()
 
                 for timestep in timestamps:
                     for measure, values in forecasts.iteritems():
                         tmp.update({measure: values.pop(0)})
-                    #print tmp
                     forecastDict.update({timestep: dict(tmp)})
 
-
-                #print forecastDict
-
-                for key, value in forecastDict.iteritems():
-                    print(key, value)
-
-
+                # Add retreived data to DB
+                for time, forecast in forecastDict.iteritems():
+                    timestamp = rmTimestampFromDateAsString(time[:-5], "%Y-%m-%dT%H:%M:%S")
+                    yesterdayTimestamp = rmGetStartOfDay(timestamp - 12 * 60 * 60)
+                    if timestamp is None:
+                        log.debug("Cannot convert timestamp: %s to unix timestamp" % datestring)
+                        continue
+                    # Temperature
+                    if forecast['TTT'] != '-':
+                        TTT = float(forecast['TTT']) - 273.15
+                        self.addValue(RMParser.dataType.TEMPERATURE, timestamp, TTT)
+                    # Minimum temperature last 24h
+                    if forecast['TN'] != '-':
+                        TN = float(forecast['TN']) - 273.15
+                        self.addValue(RMParser.dataType.MINTEMP, timestamp - 12 * 60 * 60, TN)
+                    # Maximum temperature last 24h
+                    if forecast['TX'] != '-':
+                        TX = float(forecast['TX']) - 273.15
+                        self.addValue(RMParser.dataType.MINTEMP, timestamp - 12 * 60 * 60, TX)
+                    # Windspeed
+                    if forecast['FF'] != '-':
+                        FF = float(forecast['FF'])
+                        self.addValue(RMParser.dataType.WIND, timestamp, FF)
+                    # Precipation last 24h
+                    if forecast['RRdc'] != '-':
+                        RRdc = float(forecast['RRdc'])
+                        self.addValue(RMParser.dataType.QPF, yesterdayTimestamp, RRdc)
+                    # Atmospheric pressure
+                    if forecast['PPPP'] != '-':
+                        PPPP = float(forecast['PPPP'])/10
+                        self.addValue(RMParser.dataType.PRESSURE, timestamp, PPPP)
 
         except Exception as e:
             log.error("*** Error running DWD parser")
