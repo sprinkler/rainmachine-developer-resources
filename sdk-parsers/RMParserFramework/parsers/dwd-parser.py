@@ -183,8 +183,13 @@ class DWDParser(RMParser):
                         self.addValue(RMParser.dataType.QPF, yesterdayTimestamp, RRdc)
                     # Atmospheric pressure
                     if forecast['PPPP'] != '-':
-                        PPPP = float(forecast['PPPP'])/10
+                        PPPP = float(forecast['PPPP'])/1000
                         self.addValue(RMParser.dataType.PRESSURE, timestamp, PPPP)
+                    # Dewpoint
+                    if forecast['Td'] != '-':
+                        Td = float(forecast['Td']) - 273.15
+                        self.addValue(RMParser.dataType.DEWPOINT, timestamp, Td)
+
 
         except Exception as e:
             log.error("*** Error running DWD parser")
