@@ -1,5 +1,5 @@
 # DWD parser for rainmachine
-# Copyright (C) 2018  Sebastian Kuhn
+# Copyright (C) 2019  Sebastian Kuhn
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,11 +16,9 @@
 
 from RMParserFramework.rmParser import RMParser  # Mandatory include for parser definition
 from RMUtilsFramework.rmLogging import log       # Optional include for logging
-from RMUtilsFramework.rmTimeUtils import rmTimestampFromDateAsString # Timestamps
-
-import zipfile  # unzipping the KML file
-from xml.etree import ElementTree # iterating of the extracted XML
-
+import zipfile
+from xml.etree import ElementTree
+from RMUtilsFramework.rmTimeUtils import rmTimestampFromDateAsString, rmGetStartOfDay
 from io import BytesIO, SEEK_SET, SEEK_END
 
 # Helper to create a random-access, buffered stream from the zip input stream,
@@ -161,7 +159,7 @@ class DWDParser(RMParser):
                     timestamp = rmTimestampFromDateAsString(time[:-5], "%Y-%m-%dT%H:%M:%S")
                     yesterdayTimestamp = rmGetStartOfDay(timestamp - 12 * 60 * 60)
                     if timestamp is None:
-                        log.debug("Cannot convert timestamp: %s to unix timestamp" % datestring)
+                        log.debug("Cannot convert timestamp: %s to unix timestamp" % time)
                         continue
                     # Temperature
                     if forecast['TTT'] != '-':

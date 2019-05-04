@@ -99,4 +99,3 @@ Removing this flag parsers will be executed by their parserInterval defined for 
 # Further reading
 
 https://support.rainmachine.com/hc/en-us/articles/228620727-How-to-integrate-RainMachine-with-different-weather-forecast-services
-

@@ -41,18 +41,18 @@ class RMParserType(type):
                     global USE_THREADING__
                     if not USE_THREADING__:
                         seconds = 10 * 60
-                      #  _old_handler = signal.signal(signal.SIGALRM, _handle_timeout)
-#                        signal.alarm(seconds)
+                        _old_handler = signal.signal(signal.SIGALRM, _handle_timeout)
+                        signal.alarm(seconds)
                     try:
                         result = attrs["perform"](self)
                     except RMTimeoutError, e:
                         log.error("*** Timeout occurred while running parser %s" % self.parserName)
                         log.exception(e)
                         return None
-#                    finally:
-#                       if not USE_THREADING__:
-#                            signal.alarm(0)
-                           # signal.signal(signal.SIGALRM, _old_handler)
+                    finally:
+                        if not USE_THREADING__:
+                            signal.alarm(0)
+                            signal.signal(signal.SIGALRM, _old_handler)
 
                     return result
 
