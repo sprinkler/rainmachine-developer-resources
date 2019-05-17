@@ -148,6 +148,7 @@ class WeatherLinkIP(RMParser):
             day_et = struct.unpack('H', raw_data[57:59])[0] / 1000
             day_et = convertInchesToMM(day_et)
             log.info("Day EvapoTranspiration: %s" % day_et)
+            self.addValue(RMParser.dataType.ET0, timestamp, day_et)
 
         #xmtr_battery_status = struct.unpack('?', raw_data[87:88])[0]
         #console_battery_volts = ((struct.unpack('h', raw_data[88:90])[0] * 300) / 512) / 100.0
