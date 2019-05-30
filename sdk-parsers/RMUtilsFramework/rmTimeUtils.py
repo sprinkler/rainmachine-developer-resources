@@ -3,15 +3,25 @@
 # Authors: Nicu Pavel <npavel@mini-box.com>
 #          Codrin Juravle <codrin.juravle@mini-box.com>
 
-
 from datetime import datetime, timedelta, tzinfo
 from math import sin, cos, asin, acos, sqrt
 
+import time, calendar
+import ctypes,os, fcntl, errno
+
 from RMUtilsFramework.rmLogging import log
 
-import time,calendar
-
 ZERO = timedelta(0)
+Y2K38_MAX_YEAR = 2037
+Y2K38_MAX_TIMESTAMP = 2147483647
+
+# For monotonic time
+class timespec(ctypes.Structure):
+    _fields_ = [
+        ('tv_sec', ctypes.c_long),
+        ('tv_nsec', ctypes.c_long)
+    ]
+
 
 class UTC(tzinfo):
     """UTC"""
@@ -28,19 +38,30 @@ utc = UTC()
 utc_t0 = datetime(1970, 1, 1, tzinfo=utc)
 
 def rmYMDToTimestamp(year, month, day):
+    if year > Y2K38_MAX_YEAR:  #Y2K38
+        year = Y2K38_MAX_YEAR
     try:
         return int(datetime(year, month, day).strftime("%s"))
     except ValueError:
         return int(time.mktime(datetime(year, month, day).timetuple())) # Windows platform doesn't have strftime(%s)
 
 def rmYMDFromTimestamp(timestamp):
+    if timestamp > Y2K38_MAX_TIMESTAMP: #Y2K38
+        timestamp = Y2K38_MAX_TIMESTAMP
+
     d = datetime.fromtimestamp(timestamp)
     return d.year, d.month, d.day
 
 def rmTimestampToDate(timestamp):
+    if timestamp > Y2K38_MAX_TIMESTAMP: #Y2K38
+        timestamp = Y2K38_MAX_TIMESTAMP
+
     return datetime.fromtimestamp(timestamp)
 
 def rmTimestampToDateAsString(timestamp, format = None):
+    if timestamp > Y2K38_MAX_TIMESTAMP: #Y2K38
+        timestamp = Y2K38_MAX_TIMESTAMP
+
     if format:
         return datetime.fromtimestamp(timestamp).strftime(format)
     return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
@@ -52,12 +73,19 @@ def rmCurrentTimestampToDateAsString(format = None):
     return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 def rmTimestampToUtcDateAsString(timestamp, format = None):
+    if timestamp > Y2K38_MAX_TIMESTAMP:  #Y2K38
+        timestamp = Y2K38_MAX_TIMESTAMP
     if format:
         return datetime.utcfromtimestamp(timestamp).strftime(format)
     return datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 def rmTimestampFromDateAsString(dateString, format):
     return int(datetime.strptime(dateString, format).strftime("%s"))
+
+# Converts a date string in UTC format to a local timestamp (ex: 2019-05-20T12:00:00Z)
+def rmTimestampFromUTCDateAsString(dateString, format):
+    dt = datetime.strptime(dateString, format)
+    return int((dt - datetime.utcfromtimestamp(0)).total_seconds())
 
 def rmTimestampFromDateAsStringWithOffset(dateString):
     # format in form of 2015-04-24T08:00:00-04:00 converted to UTC timestamp
@@ -181,8 +209,10 @@ def rmGetSunsetTimestampForDayTimestamp(ts, lat, lon, elevation):
     tsJset = julianDayToUTC(Jset)
     return  tsJset
 
-
 def rmGetSunriseTimestampForDayTimestamp(ts, lat, lon, elevation):
+    if lat is None or lon is None:
+        log.debug("Latitude or longitude is not set. Returning same timestamp")
+        return ts
     Jtr, w0 = computeSuntransitAndDayLenghtForDayTs(ts, lat, -lon, elevation)
     Jrise = Jtr-w0/360
     tsJrise = julianDayToUTC(Jrise)
@@ -207,15 +237,18 @@ def __sina(degree):
     radian = degree/180*3.14159265359
     return sin(radian)
 
-
 def __acosa(x):
+    if abs(x) > 1:
+        return 180. if  x< 0 else 0.
     radian = acos(x)
-    return radian/3.14159265359*180
+    return radian/3.14159265359*180.
 
 
 def __asina(x):
+    if abs(x) > 1:
+        return  -90. if  x< 0 else 90.
     radian = asin(x)
-    return radian/(3.14159265359)*180
+    return radian/(3.14159265359)*180.
 
 
 
@@ -249,6 +282,8 @@ def __computeSinSunDeclination(L):
 
 
 def computeHourAngle(nlat, sdelta, elevation):
+    if elevation < 0:
+        elevation = 0
     elevCoef = -2.076*sqrt(elevation)/60
     cosw0 = (__sina(-0.83+elevCoef) - __sina(nlat)*sdelta)/ ( sqrt(1-sdelta*sdelta) * __cosa(nlat))
     return __acosa(cosw0)
@@ -273,7 +308,7 @@ def rmNTPFetch(server = "pool.ntp.org", withRequestDrift = False):
         sock.sendto(requestPacket, (server, 123))
         data, ip = sock.recvfrom(1024)
     except Exception, e:
-        log.error("NTPFetch: Error receiving data: %s" % e)
+        #log.error("NTPFetch: Error receiving data: %s" % e)
         return None
 
     try:
@@ -290,3 +325,82 @@ def rmNTPFetch(server = "pool.ntp.org", withRequestDrift = False):
         log.error("NTPFetch: Conversion failed.")
         return None
 
+
+def getAlarmElapsedRealTime():
+    ### DEPRECATED: This method was used on Android to get the UP_TIME (replaced by monotonicTime())
+    elapsedTime = -1
+    try:
+         alarmFile = open("/dev/alarm", 'r')
+         if alarmFile:
+             t = timespec()
+
+             # ANDROID_ALARM_GET_TIME(ANDROID_ALARM_ELAPSED_REALTIME) = 0x40086134
+             result = fcntl.ioctl(alarmFile.fileno(), 0x40086134, t)
+             if result == 0:
+                 elapsedTime = t.tv_sec
+
+             alarmFile.close()
+    except Exception, e:
+        log.error(e)
+
+    return elapsedTime
+
+
+
+class rmMonotonicTime:
+    CLOCK_MONOTONIC_RAW = 4 # see <linux/time.h>
+
+    def __init__(self, fallback = True):
+        self.fallback = fallback
+        self.clock_gettime = None
+        self.get = None
+        self.monotonicInit()
+
+    def monotonicInit(self):
+        try:
+            from RMOSGlue.rmOSPlatform import RMOSPlatform
+            if RMOSPlatform().AUTODETECTED == RMOSPlatform.ANDROID:
+                librt = ctypes.CDLL('libc.so', use_errno=True)
+                log.info("Initialised Android monotonic clock")
+            elif RMOSPlatform().AUTODETECTED == RMOSPlatform.OPENWRT:
+                librt = ctypes.CDLL('librt.so.0', use_errno=True)
+                log.info("Initialised OpenWRT monotonic clock")
+            else:
+                librt = ctypes.CDLL('librt.so.1', use_errno=True)
+                log.info("Initialised generic monotonic clock")
+
+            self.clock_gettime = librt.clock_gettime
+            self.clock_gettime.argtypes = [ctypes.c_int, ctypes.POINTER(timespec)]
+            self.get = self.monotonicTime
+        except Exception, e:
+            self.get = self.monotonicFallback
+            log.error("Cannot initialise monotonicClock will use fallback time.time() method !")
+
+
+    def monotonicFallback(self, asSeconds = True):
+        if asSeconds:
+            return int(time.time())
+
+        return time.time()
+
+    def monotonicTime(self, asSeconds = True):
+        t = timespec()
+        if self.clock_gettime(rmMonotonicTime.CLOCK_MONOTONIC_RAW , ctypes.pointer(t)) != 0:
+            errno_ = ctypes.get_errno()
+            if self.fallback:
+                log.info("Monotonic Clock Error ! Reverting to time.time() fallback")
+                return self.monotonicFallback(asSeconds)
+            else:
+                raise OSError(errno_, os.strerror(errno_))
+
+        if asSeconds:
+            return t.tv_sec
+
+        return t.tv_sec + t.tv_nsec * 1e-9
+
+
+#-----------------------------------------------------------------------------------------------
+#
+#
+#
+globalMonotonicTime = rmMonotonicTime()

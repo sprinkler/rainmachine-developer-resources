@@ -11,13 +11,12 @@ from RMUtilsFramework.rmTypeUtils import *
 import datetime, time, os
 from xml.etree import ElementTree as e
 from datetime import timedelta
-from collections import OrderedDict
 
 from RMDataFramework.rmUserSettings import globalSettings
 
 
-class METNO(RMParser):
-    parserName = "METNO Parser"
+class METNOOld(RMParser):
+    parserName = "METNO Old Parser"
     parserDescription = "Global weather service from Norwegian Meteorological Institute http://met.no"
     parserForecast = True
     parserHistorical = False
@@ -27,7 +26,7 @@ class METNO(RMParser):
     params = {}
 
     def isEnabledForLocation(self, timezone, lat, long):
-        if METNO.parserEnabled and timezone:
+        if METNOOld.parserEnabled and timezone:
             return timezone.startswith("Europe")
         return False
 
@@ -37,7 +36,6 @@ class METNO(RMParser):
         URLParams = [("lat", s.location.latitude),
                   ("lon", s.location.longitude),
                   ("msl", int(round(s.location.elevation)))]
-
         #-----------------------------------------------------------------------------------------------
         #
         # Get hourly data.
@@ -47,7 +45,7 @@ class METNO(RMParser):
             return
 
         tree = e.parse(d)
-        #tree = e.parse("/tmp/MET.NO/forecast.xml")
+        #tree = e.parse("/home/panic/MET.NO/forecast.xml")
 
         if tree.getroot().tag == 'error':
             log.error("*** No hourly information found in response!")
@@ -74,6 +72,20 @@ class METNO(RMParser):
             qpf         = self.__extractTagData(data, 'precipitation')
             condition   = self.__extractTagData(data, 'symbol')
 
+            # temp = self.__parseWeatherTag(tree, 'temperature')
+            # mintemp = self.__parseWeatherTag(tree, 'minTemperature')
+            # maxtemp = self.__parseWeatherTag(tree, 'maxTemperature')
+            # dewpoint = self.__parseWeatherTag(tree, 'dewpointTemperature')
+            # wind = self.__parseWeatherTag(tree, 'windSpeed')
+            # humidity = self.__parseWeatherTag(tree, 'humidity')
+            # pressure = self.__parseWeatherTag(tree, 'pressure', 'float')
+            # qpf = self.__parseWeatherTag(tree, 'precipitation')
+            # condition = self.__parseWeatherTag(tree, 'symbol')
+
+            # tree.getroot().clear()
+            # del tree
+            # tree = None
+
             self.addValues(RMParser.dataType.TEMPERATURE, temp)
             self.addValues(RMParser.dataType.MINTEMP, mintemp)
             self.addValues(RMParser.dataType.MAXTEMP, maxtemp)
@@ -88,53 +100,39 @@ class METNO(RMParser):
     def __parseXMLData(self, tree):
         dateFormat = "%Y-%m-%dT%H:%M:%SZ"
         data = {}
-        todayTimestamp = rmCurrentDayTimestamp()
 
         for w in tree.getroot().find('product'):
             for wd in w.find('location'):
                 tag = wd.tag
 
-                # Reduce memory size by skipping tags that we don't need
-                if (tag == 'cloudiness' or tag == 'fog' or tag == 'lowClouds' or tag == 'mediumClouds' or tag == 'highClouds' or tag == 'windDirection'):
-                    continue
-
                 from_time = w.get('from')
                 to_time = w.get('to')
 
-                # New function call in next branch
-                intervalStartTimestamp = rmTimestampFromUTCDateAsString(from_time, dateFormat)
-                intervalEndTimestamp = rmTimestampFromUTCDateAsString(to_time, dateFormat)
+                intervalStartTimestamp = rmTimestampFromDateAsString(from_time, dateFormat) + 1 # 1 second more than hour boundary
+                intervalEndTimestamp = rmTimestampFromDateAsString(to_time, dateFormat) - 1 # 1 second less than hour boundary
 
-                if intervalStartTimestamp < todayTimestamp:
-                    log.info("From: %s To: %s" % (from_time, to_time))
-                    log.info("*** Local conversion of start timestamp (%s) in the past skipping ..." % from_time)
-                    continue
-
-                localStartDate = rmTimestampToDate(intervalStartTimestamp)
-                localEndDate = rmTimestampToDate(intervalEndTimestamp)
-
-                day = localStartDate.strftime('%Y-%m-%d')
+                day, startTimeStr = from_time.split("T")
+                endTimeStr = to_time.split("T")[1]
 
                 if tag not in data:
-                    data[tag] = OrderedDict()
+                    data[tag] = {}
 
                 if day not in data[tag]:
                     data[tag][day] = []
 
-                startHour = localStartDate.hour
-                endHour = localEndDate.hour
+                startHourStr =  startTimeStr.split(":")[0]
+                endHourStr = endTimeStr.split(":")[0]
 
                 try:
-                    val = None
-                    if (tag == 'windSpeed'):
+                    if (tag == 'windDirection'):
+                        val = toFloat(wd.get('deg'))
+                    elif (tag == 'windSpeed'):
                         val = toFloat(wd.get('mps'))
                     elif (tag == 'symbol'):
                         condition = toInt(wd.get('number'))
                         val = self.conditionConvert(condition)
-                    elif (tag == 'cloudiness' or tag == 'fog' or tag == 'lowClouds' or tag == 'mediumClouds' or tag == 'highClouds'): # UNUSED
+                    elif (tag == 'cloudiness' or tag == 'fog' or tag == 'lowClouds' or tag == 'mediumClouds' or tag == 'highClouds'):
                         val = toFloat(wd.get('percent'))
-                    elif (tag == 'windDirection'): # UNUSED
-                        val = toFloat(wd.get('deg'))
                     else:
                         val = toFloat(wd.get('value'))
 
@@ -147,8 +145,8 @@ class METNO(RMParser):
                     log.debug(e)
 
                 data[tag][day].append({
-                    "startHour": startHour,
-                    "endHour": endHour,
+                    "startHour": startHourStr,
+                    "endHour": endHourStr,
                     "start": intervalStartTimestamp,
                     "end": intervalEndTimestamp,
                     "value": val
@@ -165,78 +163,55 @@ class METNO(RMParser):
         if tag not in data:
             return []
 
-        for day in data[tag].keys():
-            log.info("Day: %s - %s" % (day, tag))
+        for day in sorted(data[tag].keys()):
+            #log.info(day)
             daySum = 0  # For debugging
-            partSum = None  # For averaging hourly data to 6 hours interval
+            partSum = 0 # For averaging hourly data to 6 hours interval
             hourlyCounter = 0
             intervalCounter = 1
-            usedIntervals = []  # Keep track of intervals so we can eliminate intersecting ones
 
             for interval in data[tag][day]:
                 value = interval["value"]
                 intervalTime = interval["start"]
-                sH = interval["startHour"]
-                eH = interval["endHour"]
-                shouldSkip = False
-
-                # Ends in next day
-                if eH < sH:
-                    log.info("\t (SKIP) Interval %s %s ends in next day" % (sH, eH))
-                    continue
-
-                # Does this new interval intersects with an interval already in our data
-                for si in usedIntervals:
-                    # if tag == "precipitation":
-                    #     log.info("Checking %s-%s against %s-%s" % (sH, eH, si[0], si[1]))
-                    if sH < si[1]:
-                        if tag == "precipitation":
-                            log.info("%s %s" % (day, tag))
-                            log.info("\t (SKIP i) Interval %s-%s intersects with interval %s-%s" % (sH, eH, si[0], si[1]))
-                        shouldSkip = True
-                        break
-
-                if shouldSkip:
-                    continue
+                sH = int(interval["startHour"])
+                eH = int(interval["endHour"])
+                if eH == 0:
+                    eH = 24
                 duration = eH - sH
 
                 # We found a "hourly" entry that contains temperature, windSpeed, pressure, dew
-                if duration == 0 and value is not None:
-                    log.info("\t (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
-                    if partSum is None:
-                        partSum = value
-                    else:
-                        partSum += value
-
+                # This always start at 1 not at 0
+                if duration == 0:
+                    #log.info("\t (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
+                    partSum += value
                     hourlyCounter += 1
-                    if sH > 0 and sH % hoursInterval == 0 or hourlyCounter > hoursInterval:
-                        partSum /= hourlyCounter
+                    if sH % hoursInterval == 0 or hourlyCounter > hoursInterval:
+                        partSum /=  hourlyCounter
                         daySum += partSum
-                        log.info("%s Hour average %s to %s (%s values)" % (hoursInterval, tag, partSum, hourlyCounter))
-                        usedIntervals.append((sH, eH))
+                        #log.info("%s Hour average %s to %s (%s values)" % (hoursInterval, tag, partSum, hourlyCounter))
                         result.append((intervalTime, partSum)) # Add 6 hours interval value
                         hourlyCounter = 0
                         partSum = 0
                         intervalCounter += 1
-                elif duration == hoursInterval:
-                    usedIntervals.append((sH, eH))
+                elif duration != hoursInterval:
+                    continue
+                elif sH % hoursInterval == 0 and eH % hoursInterval == 0:
                     result.append((intervalTime, value)) # Add 6 hours interval value
                     daySum += value
-                    log.info("\t ADDED (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
-                else:
-                    log.info("\t SKIP (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
+                    #log.info("\t (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
+                #else:
+                #    log.info("\t SKIP (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
 
             if tag != "precipitation":
                 # Any remaining partials for 6h averaging for a day
-                if partSum is not None and hourlyCounter > 0:
+                if partSum > 0 and hourlyCounter > 0:
                     partSum /= hourlyCounter
                     daySum += partSum
-                    log.info("(Partial) %s Hour Average hourly %s to %s (%s values)" % (hoursInterval, tag, partSum, hourlyCounter))
-                    usedIntervals.append((sH, eH))
+                    #log.info("(Partial) %s Hour Average hourly %s to %s (%s values)" % (hoursInterval, tag, partSum, hourlyCounter))
                     result.append((intervalTime, partSum)) # Add 6 hours interval value
                 daySum = daySum/intervalCounter
 
-            log.info("Day %s Total/AVG (%s/%s) %s %s (%s)\n\n" %  (day, intervalCounter, hourlyCounter, tag, partSum, daySum))
+            #log.info("Day Total/AVG (%s)%s %s\n\n" %  (intervalCounter, tag, daySum))
         return result
 
 

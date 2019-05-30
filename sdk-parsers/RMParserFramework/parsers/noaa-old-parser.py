@@ -17,8 +17,8 @@ import datetime, time
 from xml.etree import ElementTree as e
 
 
-class NOAA(RMParser):
-    parserName = "NOAA Parser"
+class NOAAOld(RMParser):
+    parserName = "NOAA Old Parser"
     parserDescription = "North America weather forecast from National Oceanic and Atmospheric Administration"
     parserForecast = True
     parserHistorical = False
@@ -29,7 +29,7 @@ class NOAA(RMParser):
 
 
     def isEnabledForLocation(self, timezone, lat, long):
-        if NOAA.parserEnabled and timezone:
+        if NOAAOld.parserEnabled and timezone:
             return timezone.startswith("America") or timezone.startswith("US")
         return False
 
@@ -64,8 +64,8 @@ class NOAA(RMParser):
         dailyPath = "/xml/sample_products/browser_interface/ndfdBrowserClientByDay.php"
 
         baseParams = [
-           ("lat", s.location.latitude),
-           ("lon", s.location.longitude)
+            ("lat", s.location.latitude),
+            ("lon", s.location.longitude)
         ]
 
         hourlyParams = [
@@ -273,8 +273,6 @@ class NOAA(RMParser):
 
             if found:
                 break
-
-
         return validDates
 
     def __parseWeatherTag(self, tree, tag, type, subtag = "value", useStartTimes = True, typeConvert = None):
@@ -282,7 +280,8 @@ class NOAA(RMParser):
         forecastTimes = []
         timeLayoutKey = None
 
-        dayTimestamp = rmCurrentDayTimestamp()
+        tuple = datetime.datetime.fromtimestamp(int(time.time())).timetuple()
+        dayTimestamp = int(datetime.datetime(tuple.tm_year, tuple.tm_mon, tuple.tm_mday).strftime("%s"))
         maxDayTimestamp = dayTimestamp + globalSettings.parserDataSizeInDays * 86400
 
         for w in tree.getroot().getiterator(tag = tag):
@@ -305,36 +304,8 @@ class NOAA(RMParser):
                 values.append(val)
 
         result = zip(forecastTimes, values)
-
-        result.sort(key=lambda z: z[0])
-
-
-        # Skip days that don't have full intervals (that cover a day), otherwise the weather date will start to disapear
-        tmpresult = []
-        lastDay = None
-        skipDay = None
-        for z in result:
-            day = rmGetStartOfDay(z[0])
-            startDate = rmTimestampToDate(z[0])
-            startHour = startDate.hour
-
-            if lastDay is None or lastDay < day:
-                skipDay = None
-                lastDay = day
-                log.info("%s %s: found new day: %s - %s" % (tag, type, rmTimestampToUtcDateAsString(day), rmTimestampToUtcDateAsString(lastDay)))
-                if startHour > 10:
-                    skipDay = day
-
-            if day == skipDay:
-                log.info("\tday: %s starting with hour %s (local) skipping..." % (rmTimestampToUtcDateAsString(day), startHour))
-                continue
-
-            if dayTimestamp > z[0] >= maxDayTimestamp:
-                log.info("%s %s: reject date %s/%s as it's in the past" %(tag, type, z[0], dayTimestamp))
-                continue
-
-            tmpresult.append(z)
-        return tmpresult
+        result = [z for z in result if dayTimestamp <= z[0] < maxDayTimestamp]
+        return result
 
 
     def conditionConvert(self, conditionStr):
@@ -392,8 +363,3 @@ class NOAA(RMParser):
             return  RMParser.conditionType.Cold
         else:
             return  RMParser.conditionType.Unknown
-
-
-if __name__ == "__main__":
-    parser = NOAA2()
-    parser.perform()
