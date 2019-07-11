@@ -24,7 +24,7 @@
 #
 # Run a thread in the background that listens for the WeatherFlow hub data
 # broadcasts and collect the relevant data. The hub does a UDP broadcast
-# for each sensor.  The body of the boardcast contains JSON formatted data
+# for each sensor.  The body of the broadcast contains JSON formatted data
 # from the sensor.
 #
 # Each sensor has a unique serial number. Multiple sensors are allowed and
@@ -124,6 +124,7 @@ class WeatherFlow(RMParser):
         prev_air_hour = 0
         prev_sky_hour = 0
         prev_air_day = 0
+        prev_sky_day = 0
         bufferSize = 1024 # whatever you need
         port = 50222
 
@@ -199,9 +200,14 @@ class WeatherFlow(RMParser):
                     sky_count = 0
                     wind_total = 0
                     srad_total = 0
+
+                if int(ts / (3600 * 24)) != prev_sky_day:
+                    log.debug("New Day! %d vs %d" % ((ts / (3600 * 24)), prev_sky_day))
                     rain_total = 0
 
+
                 prev_sky_hour = int(ts / 3600)
+                prev_sky_day = int(ts / (3600 * 24))
                 sky_count += 1
 
                 wind_total += data["obs"][0][5]
