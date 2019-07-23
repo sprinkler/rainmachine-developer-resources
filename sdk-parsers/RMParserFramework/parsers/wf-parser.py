@@ -70,7 +70,7 @@ class WeatherFlow(RMParser):
     def __init__(self):
         RMParser.__init__(self)
         self.started = False
-        log.debug("WeatherFlow local parser 1.1.0  07/23/2019")
+        log.debug("WeatherFlow local parser 1.1.1  07/23/2019")
 
     def perform(self):                # The function that will be executed must have this name
 
@@ -120,8 +120,10 @@ class WeatherFlow(RMParser):
                 self.addValue(RMParser.dataType.SOLARRADIATION, rawdata['ts'], rawdata['report']['srad'])
                 self.addValue(RMParser.dataType.RAIN, rawdata['ts'], rawdata['report']['rain'])
                 self.addValue(RMParser.dataType.DEWPOINT, rawdata['ts'], rawdata['report']['dewpoint'])
-                self.addValue(RMParser.dataType.MAXTEMP, rawdata['ts'], rawdata['report']['max_temp'])
-                self.addValue(RMParser.dataType.MINTEMP, rawdata['ts'], rawdata['report']['min_temp'])
+                if rawdata['report']['max_temp'] < 60:
+                    self.addValue(RMParser.dataType.MAXTEMP, rawdata['ts'], rawdata['report']['max_temp'])
+                if rawdata['report']['max_temp'] > -60:
+                    self.addValue(RMParser.dataType.MINTEMP, rawdata['ts'], rawdata['report']['min_temp'])
                 self.addValue(RMParser.dataType.MAXRH, rawdata['ts'], rawdata['report']['max_humid'])
                 self.addValue(RMParser.dataType.MINRH, rawdata['ts'], rawdata['report']['min_humid'])
 
@@ -133,6 +135,10 @@ class WeatherFlow(RMParser):
                 log.debug("solar radiation = %f" % rawdata['report']["srad"])
                 log.debug("rain = %f" % rawdata['report']["rain"])
                 log.debug("dewpoint = %f" % rawdata['report']["dewpoint"])
+                log.debug("max temperature = %f" % rawdata['report']["max_temp"])
+                log.debug("min temperature = %f" % rawdata['report']["min_temp"])
+                log.debug("max humidity = %f" % rawdata['report']["max_humid"])
+                log.debug("min humidity = %f" % rawdata['report']["min_humid"])
                 log.debug("")
 
 
@@ -187,8 +193,8 @@ class WeatherFlow(RMParser):
                         'wind': 0,
                         'srad': 0,
                         'rain': 0,
-                        'max_temp': 100,
-                        'min_temp': -100,
+                        'max_temp': -100,
+                        'min_temp': 100,
                         'max_humid': 0,
                         'min_humid': 100
                         }
