@@ -63,6 +63,8 @@ class WeatherFlow(RMParser):
         "SkySerialNumber": None
     }
 
+    parserData = [dict() for x in range(2)]
+
     def __init__(self):
         RMParser.__init__(self)
         self.started = False
@@ -163,7 +165,7 @@ class WeatherFlow(RMParser):
             hub = s.recvfrom(bufferSize)
             data = json.loads(hub[0]) # hub is a truple (json, ip, port)
 
-            now = datetime.datetime.now()
+            now = datetime.now()
 
             # Check if this is a new day, if so 
             if day_of_year != now.timetuple().tm_yday:
@@ -241,8 +243,8 @@ class WeatherFlow(RMParser):
                 rain_total += data["obs"][0][3]
                 self.report["rain"] = rain_total
 
-            ts = mod_time.mktime(now.timetuple()) + now.microsend / 1e6
-            parserData[0] = {
+            ts = mod_time.mktime(now.timetuple()) + now.microsecond / 1e6
+            self.parserData[0] = {
                     'ts': ts,
                     'report':self.report
                     }
