@@ -44,8 +44,10 @@ class WeatherFlow(RMParser):
     parserDescription = "Parse data from a WeatherFlow Smart Weather Station"
     parserForecast = False # True if parser provides future forecast data
     parserHistorical = True # True if parser also provides historical data (only actual observed data)
-    #parserInterval = 6 * 3600             # Your parser running interval in seconds, data will only be mixed in hourly intervals
-    #parserInterval = 1800             # Your parser running interval in seconds, data will only be mixed in hourly intervals
+    # parserInterval defines how often the mixer will call this to retrieve
+    # data. The default is set to 300 seconds.  It should not be set to
+    # less than 60 seconds as the WeatherFlow data is only updated once a
+    # minute.
     parserInterval = 300             # Your parser running interval in seconds, data will only be mixed in hourly intervals
     #parserDebug = False
     parserDebug = True
@@ -68,6 +70,7 @@ class WeatherFlow(RMParser):
     def __init__(self):
         RMParser.__init__(self)
         self.started = False
+        log.debug("WeatherFlow local parser 1.1.0  07/23/2019")
 
     def perform(self):                # The function that will be executed must have this name
 
@@ -110,17 +113,17 @@ class WeatherFlow(RMParser):
             return  None # First time, just start the thread, we have no data yet.
         for i, rawdata in enumerate(self.parserData, start=0):
             if 'report' in rawdata:
-                self.addValue(RMParse.dataType.TEMPERATURE, rawdata['ts'], rawdata['report']['temperature'])
-                self.addValue(RMParse.dataType.RH, rawdata['ts'], rawdata['report']['humdity'])
-                self.addValue(RMParse.dataType.PRESSURE, rawdata['ts'], rawdata['report']['pressure'])
-                self.addValue(RMParse.dataType.WIND, rawdata['ts'], rawdata['report']['wind'])
-                self.addValue(RMParse.dataType.SOLARRADIATION, rawdata['ts'], rawdata['report']['srad'])
-                self.addValue(RMParse.dataType.RAIN, rawdata['ts'], rawdata['report']['rain'])
-                self.addValue(RMParse.dataType.DEWPOINT, rawdata['ts'], rawdata['report']['dewpoint'])
-                self.addValue(RMParse.dataType.MAXTEMP, rawdata['ts'], rawdata['report']['max_temp'])
-                self.addValue(RMParse.dataType.MINTEMP, rawdata['ts'], rawdata['report']['min_temp'])
-                self.addValue(RMParse.dataType.MAXRH, rawdata['ts'], rawdata['report']['max_humid'])
-                self.addValue(RMParse.dataType.MINRH, rawdata['ts'], rawdata['report']['min_humid'])
+                self.addValue(RMParser.dataType.TEMPERATURE, rawdata['ts'], rawdata['report']['temperature'])
+                self.addValue(RMParser.dataType.RH, rawdata['ts'], rawdata['report']['humidity'])
+                self.addValue(RMParser.dataType.PRESSURE, rawdata['ts'], rawdata['report']['pressure'])
+                self.addValue(RMParser.dataType.WIND, rawdata['ts'], rawdata['report']['wind'])
+                self.addValue(RMParser.dataType.SOLARRADIATION, rawdata['ts'], rawdata['report']['srad'])
+                self.addValue(RMParser.dataType.RAIN, rawdata['ts'], rawdata['report']['rain'])
+                self.addValue(RMParser.dataType.DEWPOINT, rawdata['ts'], rawdata['report']['dewpoint'])
+                self.addValue(RMParser.dataType.MAXTEMP, rawdata['ts'], rawdata['report']['max_temp'])
+                self.addValue(RMParser.dataType.MINTEMP, rawdata['ts'], rawdata['report']['min_temp'])
+                self.addValue(RMParser.dataType.MAXRH, rawdata['ts'], rawdata['report']['max_humid'])
+                self.addValue(RMParser.dataType.MINRH, rawdata['ts'], rawdata['report']['min_humid'])
 
                 log.debug("timestamp = %s" % datetime.fromtimestamp(rawdata['ts']))
                 log.debug("temperature = %f" % rawdata['report']["temperature"])
@@ -193,7 +196,7 @@ class WeatherFlow(RMParser):
                 day_of_year = now.timetuple().tm_yday
                 self.parserData[1] = self.parserData[0]
 
-            #print("type = %s s/n = %s" % (data["type"], data["serial_number"]))
+            #log.debug("type = %s s/n = %s" % (data["type"], data["serial_number"]))
 
             if (data["type"] == "obs_air") and (data["serial_number"] == self.params["AirSerialNumber"]):
 
