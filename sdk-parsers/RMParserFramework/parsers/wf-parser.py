@@ -185,6 +185,8 @@ class WeatherFlow(RMParser):
                 humd_total = 0
                 pres_total = 0
                 dewp_total = 0
+                srad_total = 0
+                rain_total = 0
                 self.report = {
                         'temperature': 0,
                         'humidity': 0,
