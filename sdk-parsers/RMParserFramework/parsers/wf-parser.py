@@ -71,7 +71,7 @@ class WeatherFlow(RMParser):
     def __init__(self):
         RMParser.__init__(self)
         self.started = False
-        log.debug("WeatherFlow local parser 1.1.2  07/25/2019")
+        log.debug("WeatherFlow local parser 1.1.3  08/15/2019")
 
     def perform(self):                # The function that will be executed must have this name
 
