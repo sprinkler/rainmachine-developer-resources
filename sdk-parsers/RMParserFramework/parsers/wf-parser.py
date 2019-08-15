@@ -33,6 +33,7 @@
 
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
+from RMUtilsFramework.rmTimeUtils import rmGetStartOfDay
 
 from datetime import datetime
 import urllib2, json, time, ssl, socket, threading, math
@@ -203,6 +204,10 @@ class WeatherFlow(RMParser):
 
                 day_of_year = now.timetuple().tm_yday
                 self.parserData[1] = self.parserData[0]
+
+                # reset yesterday's timestamp to start of day
+                if 'ts' in self.parserData[1]:
+                    self.parserData[1]['ts'] = rmGetStartOfDay(self.parserData[1]['ts'])
 
             #log.debug("type = %s s/n = %s" % (data["type"], data["serial_number"]))
 
