@@ -4,7 +4,9 @@
 #          Ciprian Misaila <ciprian.misaila@mini-box.com>
 #   Meteobridge parser:
 #          Gordon Larsen    <gordon@the-larsens.ca>
-#
+# Updates:
+# 24-Aug-19 change wind template variable to wind0avgwind-davg wind0avgwind-act to capture daily average instead of
+#           so that RM captures daily data correctly.
 
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
@@ -42,7 +44,7 @@ class MeteobridgePWS(RMParser):
 
         values = "[th0temp-act]%20[th0hum-act]%20[thb0press-act]%20[sol0evo-act]%20[mbsystem-latitude]%20" \
                  "[mbsystem-longitude]%20[th0temp-dmax]%20[th0temp-dmin]%20[th0hum-dmax]%20" \
-                 "[th0hum-dmin]%20[wind0avgwind-act]%20[sol0rad-act]%20[rain0total-daysum]%20" \
+                 "[th0hum-dmin]%20[wind0avgwind-davg]%20[sol0rad-act]%20[rain0total-daysum]%20" \
                  "[th0dew-act]%20[UYYYY][UMM][UDD][Uhh][Umm][Uss]%20[epoch]"
 
         headers = "&contenttype=text/plain;charset=iso-8859-1"
