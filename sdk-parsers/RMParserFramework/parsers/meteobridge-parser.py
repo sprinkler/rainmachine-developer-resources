@@ -20,13 +20,11 @@ class MeteobridgePWS(RMParser):
     parserHistorical = True
     parserEnabled = True
     parserDebug = False
-    parserInterval = 3600
+    parserInterval = 6 * 60 * 60
 
     params = {'IP_address': '',
               'password': ''
               }
-    
-    log.debug("Class params: {}".format(params))
 
     def isEnabledForLocation(self, timezone, lat, long):
         return MeteobridgePWS.parserEnabled
@@ -38,10 +36,8 @@ class MeteobridgePWS(RMParser):
         user = "meteobridge"
         top_level_url = str(self.params.get("IP_address"))
 
-        log.debug("Params: {}".format(self.params))
-
         if str(top_level_url) == "":
-            log.error("IP address invalid or missing")
+            log.error("IP address or hostname invalid or missing")
             return
 
         urlpath = "http://" + user + ":" + passwd + "@" + top_level_url + "/cgi-bin/template.cgi?template="
@@ -49,30 +45,24 @@ class MeteobridgePWS(RMParser):
         values = "[th0temp-act]%20[th0hum-act]%20[thb0press-act]%20[sol0evo-daysum]%20[mbsystem-latitude]%20" \
                  "[mbsystem-longitude]%20[th0temp-dmax]%20[th0temp-dmin]%20[th0hum-dmax]%20" \
                  "[th0hum-dmin]%20[wind0avgwind-davg]%20[sol0rad-act]%20[rain0total-daysum]%20" \
-                 "[th0dew-act]%20[UYYYY][UMM][UDD][Uhh][Umm][Uss]%20[epoch]%20"\
+                 "[th0dew-act]%20[UYYYY][UMM][UDD][Uhh][Umm][Uss]%20[epoch]%20" \
                  "[mbsystem-station]%20[mbsystem-stationnum]"
 
         headers = "&contenttype=text/plain;charset=iso-8859-1"
-
-        log.debug(str(urlpath) + str(values) + str(headers))
 
         try:
             mburl = urlpath + values + headers
             d = request(str(mburl))
 
-            #if d.getcode is not 200:
-            #    log.error("Missing or incorrect username or password")
-            #    return
-
             mbrdata = d.read()
-            log.debug(mbrdata)
+            log.debug("Returned data: {}".format(mbrdata))
 
         except AssertionError as error:
             log.error(str(error))
             log.error("Cannot open Meteobridge")
+            return
 
         self.getstationdata(mbrdata)
-        log.debug('MBRdata: {}'.format(mbrdata))
         log.info("Updated data from Meteobridge")
 
         return
@@ -87,11 +77,11 @@ class MeteobridgePWS(RMParser):
 
         try:
             et0 = float(pwsArray[3])
-            vp2 = True
+            vp2plus = True
 
         except:
             et0 = 0
-            vp2 = False
+            vp2plus = False
 
         mintemp = float(pwsArray[7])
         maxtemp = float(pwsArray[6])
@@ -101,7 +91,7 @@ class MeteobridgePWS(RMParser):
         wind = float(pwsArray[10])
         # wind = wind / 3.6 # the Meteobridge already reports in mps so conversion is not required
 
-        if vp2:
+        if vp2plus:
             solarradiation = float(pwsArray[11])  # needs to be converted from watt/sqm*h to Joule/sqm
 
             if solarradiation is not None:
@@ -121,6 +111,9 @@ class MeteobridgePWS(RMParser):
             self.__toUtc(pwsArray[14], temperature, rain, wind)
 
         timestamp = int(pwsArray[15])
+        stationtype = pwsArray[16]
+        stationnum = pwsArray[17]
+        log.debug("Weather station type: {0} ({1})".format(stationtype, stationnum))
 
         self.addValue(RMParser.dataType.TEMPERATURE, timestamp, temperature)
         self.addValue(RMParser.dataType.MINTEMP, timestamp, mintemp)
@@ -130,10 +123,10 @@ class MeteobridgePWS(RMParser):
         self.addValue(RMParser.dataType.MAXRH, timestamp, maxrh)
         self.addValue(RMParser.dataType.WIND, timestamp, wind)
         self.addValue(RMParser.dataType.RAIN, timestamp, rain)
-        if vp2:
-                log.debug("addValue update - VP2: {}".format(vp2))
-                self.addValue(RMParser.dataType.ET0, timestamp, et0)
-                self.addValue(RMParser.dataType.SOLARRADIATION, timestamp, solarradiation)
+        if vp2plus:
+            log.debug("addValue update - VP2: {}".format(vp2plus))
+            self.addValue(RMParser.dataType.ET0, timestamp, et0)
+            self.addValue(RMParser.dataType.SOLARRADIATION, timestamp, solarradiation)
 
         # self.addValue(RMParser.dataType.QPF, timestamp, rain) # uncomment to report measured rain as previous day QPF
         self.addValue(RMParser.dataType.DEWPOINT, timestamp, dewpoint)
@@ -173,5 +166,5 @@ class MeteobridgePWS(RMParser):
 
 
 #if __name__ == "__main__":
-#   p = MeteobridgePWS()
-#   p.perform()
+#    p = MeteobridgePWS()
+#    p.perform()
