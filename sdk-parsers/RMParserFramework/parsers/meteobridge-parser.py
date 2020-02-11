@@ -20,7 +20,7 @@ class MeteobridgePWS(RMParser):
     parserHistorical = True
     parserEnabled = True
     parserDebug = False
-    parserInterval = 30
+    parserInterval = 3600
 
     params = {'IP_address': '',
               'password': ''
