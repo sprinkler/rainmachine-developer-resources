@@ -25,11 +25,11 @@ class PWSWeather(RMParser):
     parserHistorical = True
     parserEnabled = True
     parserDebug = False
-    parserInterval = 60 * 60
+    parserInterval = 60 * 60 *6
     log.debug("Parser Interval: {}".format(parserInterval))
 
-    params = {"clientID": "67zc9glzSEU3owGxzPgNo"
-        , "Secret": "thScZtopa6ocSt0nj6yT1I0tG2K6WdiW6LEln9MK"
+    params = {"clientID": ""
+        , "Secret": ""
         , "useCustomStation": False
         , "customStationName": ""
         , "_nearbyStationsIDList": []
