@@ -25,7 +25,7 @@ class PWSWeather(RMParser):
     parserHistorical = True
     parserEnabled = True
     parserDebug = False
-    parserInterval = 60 * 60 *6
+    parserInterval = 60 * 60 * 6
     log.debug("Parser Interval: {}".format(parserInterval))
 
     params = {"clientID": ""
@@ -170,9 +170,6 @@ class PWSWeather(RMParser):
                     infoStr = "(unknown distance)"
 
                 self.params["_nearbyStationsIDList"].append(key + infoStr)
-                # self.params["_nearbyStationsIDList"].append(
-                #    key + "(" + str(distance) + "km" + "; lat=" + str(round(pwsStations.get(key)['lat'], 2)) + ", lon=" + str(
-                #        round(pwsStations.get(key)['long'], 2)) + ")")
 
         log.debug(self.params["_nearbyStationsIDList"])
 
@@ -308,6 +305,13 @@ class PWSWeather(RMParser):
                 humidity = zip(timestamp, humidity)
                 qpf = zip(timestamp, qpf)
                 condition = zip(timestamp, condition)
+
+            self.addValues(RMParser.dataType.RH, humidity)
+            self.addValues(RMParser.dataType.MAXTEMP, temperatureMax)
+            self.addValues(RMParser.dataType.MINTEMP, temperatureMin)
+            self.addValues(RMParser.dataType.QPF, qpf)
+            self.addValues(RMParser.dataType.WIND, wind)
+            self.addValues(RMParser.dataType.CONDITION, condition)
 
             log.debug(timestamp)
             log.debug(temperatureMax)
