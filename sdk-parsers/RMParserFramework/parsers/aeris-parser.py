@@ -25,7 +25,7 @@ class PWSWeather(RMParser):
     parserHistorical = True
     parserEnabled = True
     parserDebug = False
-    parserInterval = 60
+    parserInterval = 60 * 60 * 6
     log.debug("Parser Interval: {}".format(parserInterval))
 
     params = {"clientID": ""
