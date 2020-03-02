@@ -25,7 +25,7 @@ class PWSWeather(RMParser):
     parserHistorical = True
     parserEnabled = True
     parserDebug = False
-    parserInterval = 60 * 60 * 6
+    parserInterval = 60
     log.debug("Parser Interval: {}".format(parserInterval))
 
     params = {"clientID": ""
@@ -274,52 +274,48 @@ class PWSWeather(RMParser):
             maxDayTimestamp = dayTimestamp + globalSettings.parserDataSizeInDays * 86400
             simpleForecast = self.jsonResponse["response"][0]
 
-            timestamp = []
-            temperatureMax = []
-            temperatureMin = []
-            wind = []
-            humidity = []
-            qpf = []
-            condition = []
-
             for key in simpleForecast["periods"]:
                 log.debug(key)
+                timestamp = self.__toInt(key["timestamp"])
+                if timestamp is None:
+                    continue
 
-                tt = self.__toInt(key["timestamp"])
-                tt = rmGetStartOfDay(tt)
-                if tt > maxDayTimestamp:
-                    break
-                timestamp.append(self.__toInt(tt))
-                temperatureMax.append(self.__toFloat(key["maxTempC"]))
-                temperatureMin.append(self.__toFloat(key["minTempC"]))
-                windValue = self.__toFloat(key["windSpeedKPH"])
-                if windValue is not None:
-                    wind.append(windValue / 3.6)  # convertred from kmetersph to meterps
-                humidity.append(self.__toFloat(key["humidity"]))
-                qpf.append(self.__toFloat(key["precipMM"]))
-                condition.append(self.conditionConvert(key["weatherPrimaryCoded"], key["cloudsCoded"]))
+                timestamp = int(timestamp)
 
-                temperatureMax = zip(timestamp, temperatureMax)
-                temperatureMin = zip(timestamp, temperatureMin)
-                wind = zip(timestamp, wind)
-                humidity = zip(timestamp, humidity)
-                qpf = zip(timestamp, qpf)
-                condition = zip(timestamp, condition)
+                if timestamp < maxDayTimestamp:
 
-            self.addValues(RMParser.dataType.RH, humidity)
-            self.addValues(RMParser.dataType.MAXTEMP, temperatureMax)
-            self.addValues(RMParser.dataType.MINTEMP, temperatureMin)
-            self.addValues(RMParser.dataType.QPF, qpf)
-            self.addValues(RMParser.dataType.WIND, wind)
-            self.addValues(RMParser.dataType.CONDITION, condition)
+                    #tt = self.__toInt(key["timestamp"])
+                    #tt = rmGetStartOfDay(tt)
+                    #if tt > maxDayTimestamp:
+                    #    break
+                    #timestamp = self.__toInt(tt)
+                    temperatureMax = self.__toFloat(key["maxTempC"])
+                    temperatureMin = self.__toFloat(key["minTempC"])
+                    wind = self.__toFloat(key["windSpeedKPH"])
+                    if wind is not None:
+                        wind = wind / 3.6  # convertred from kmetersph to meterps
+                    humidity = self.__toFloat(key["humidity"])
+                    qpf = self.__toFloat(key["precipMM"])
+                    pop = self.convertToPercent(key["pop"])
+                    dewpoint = self.__toFloat(key["avgDewpointC"])
+                    condition = self.conditionConvert(key["weatherPrimaryCoded"], key["cloudsCoded"])
 
-            log.debug(timestamp)
-            log.debug(temperatureMax)
-            log.debug(temperatureMin)
-            log.debug(wind)
-            log.debug(humidity)
-            log.debug(qpf)
-            log.debug(condition)
+                    self.addValue(RMParser.dataType.QPF, timestamp, qpf)
+                    self.addValue(RMParser.dataType.RH, timestamp, humidity)
+                    self.addValue(RMParser.dataType.WIND, timestamp, wind)
+                    self.addValue(RMParser.dataType.POP, timestamp, pop)
+                    self.addValue(RMParser.dataType.DEWPOINT, timestamp, dewpoint)
+                    self.addValue(RMParser.dataType.MINTEMP, timestamp, temperatureMin)
+                    self.addValue(RMParser.dataType.MAXTEMP, timestamp, temperatureMax)
+                    self.addValue(RMParser.dataType.CONDITION, timestamp, condition)
+
+                    log.debug(timestamp)
+                    log.debug(temperatureMax)
+                    log.debug(temperatureMin)
+                    log.debug(wind)
+                    log.debug(humidity)
+                    log.debug(qpf)
+                    log.debug(condition)
 
         except:
             log.error("Failed to get simple forecast")
@@ -395,6 +391,12 @@ class PWSWeather(RMParser):
             return int(value)
         except:
             return None
+
+    def convertToPercent(self, f):
+        try:
+                return f * 100
+        except:
+                return None
 
     def apiCall(self, apiURL):
 
