@@ -110,7 +110,7 @@ class PWSWeather(RMParser):
 
         if self.parserForecast:
             apiURL = \
-                "http://api.aerisapi.com/forecasts/" + stationName + "?&format=json&filter=day&limit=7" + \
+                "http://api.aerisapi.com/forecasts/" + stationName + "?&format=json&filter=mdnt2mdnt&limit=7" + \
                 "&client_id=" + str(clientID) + "&client_secret=" + str(secret)
             self.jsonResponse = self.apiCall(apiURL)
 
