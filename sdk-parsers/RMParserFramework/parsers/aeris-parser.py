@@ -79,7 +79,7 @@ class PWSWeather(RMParser):
         else:
             stationName = ":auto"
             log.error("using automatic location identifier")
-            limit = 1
+            limit = 10
 
         stationName = stationName.replace(" ", "")
         log.debug("stationName: {}".format(stationName))
@@ -419,6 +419,6 @@ class PWSWeather(RMParser):
         #    log.error("Unable to open Aeris URL")
 
 
-#if __name__ == "__main__":
-#    p = PWSWeather()
-#    p.perform()
+if __name__ == "__main__":
+    p = PWSWeather()
+    p.perform()
