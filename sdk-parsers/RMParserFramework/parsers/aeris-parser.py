@@ -419,6 +419,6 @@ class PWSWeather(RMParser):
         #    log.error("Unable to open Aeris URL")
 
 
-if __name__ == "__main__":
-    p = PWSWeather()
-    p.perform()
+#if __name__ == "__main__":
+#    p = PWSWeather()
+#    p.perform()
