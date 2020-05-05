@@ -404,23 +404,24 @@ class PWSWeather(RMParser):
 
     def apiCall(self, apiURL):
 
-        # try:
-        d = self.openURL(apiURL)
-        # request = urllib2.urlopen(apiURL)
-        jsonContent = d.read()
-        if jsonContent is None:
-            log.debug("Failed to get Aeris JSON contents")
-            self.lastKnownError = "Error: Bad response"
-            return
+        try:
+            d = self.openURL(apiURL)
+            # request = urllib2.urlopen(apiURL)
+            jsonContent = d.read()
+            if jsonContent is None:
+                log.debug("Failed to get Aeris JSON contents")
+                self.lastKnownError = "Error: Bad response"
+                return
 
-        log.debug("jsonContent: {}".format(jsonContent))
+            log.debug("jsonContent: {}".format(jsonContent))
 
-        jsonResponse = (json.loads(jsonContent))
-        # print (jsonResponse)
-        if (jsonResponse['success']):
+            jsonResponse = (json.loads(jsonContent))
+            # print (jsonResponse)
+            if (jsonResponse['success']):
             return jsonResponse
-        # except:
-        #    log.error("Unable to open Aeris URL")
+
+        except OSError as err :
+            log.error("Unable to open Aeris URL:{}".format(err))
 
 
 if __name__ == "__main__":
