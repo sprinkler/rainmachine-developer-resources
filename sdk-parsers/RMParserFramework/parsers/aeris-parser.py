@@ -88,6 +88,7 @@ class PWSWeather(RMParser):
             "http://api.aerisapi.com/observations/summary/" + stationName + "?&format=json&radius=75mi&filter=allstations&limit=" + \
             str(limit) + "&client_id=" \
             + str(clientID) + "&client_secret=" + str(secret)
+        log.debug("apiURL is: {}".format(apiURL))
 
         self.jsonResponse = self.apiCall(apiURL)
         log.debug(self.jsonResponse)
