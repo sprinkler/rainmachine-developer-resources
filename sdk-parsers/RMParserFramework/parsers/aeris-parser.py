@@ -25,7 +25,7 @@ class PWSWeather(RMParser):
     parserHistorical = True
     parserEnabled = True
     parserDebug = False
-    parserInterval = 60 * 60 * 6
+    parserInterval = 60
     log.debug("Parser Interval: {}".format(parserInterval))
 
     params = {"clientID": ""
@@ -418,7 +418,7 @@ class PWSWeather(RMParser):
             jsonResponse = (json.loads(jsonContent))
             # print (jsonResponse)
             if (jsonResponse['success']):
-            return jsonResponse
+                return jsonResponse
 
         except OSError as err :
             log.error("Unable to open Aeris URL:{}".format(err))
