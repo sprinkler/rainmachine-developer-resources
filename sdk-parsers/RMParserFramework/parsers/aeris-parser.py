@@ -30,7 +30,7 @@ class PWSWeather(RMParser):
 
     params = {"clientID": ""
         , "Secret": ""
-        , "useCustomStation": False
+        , "useCustomStation": True
         , "customStationName": ""
         , "_nearbyStationsIDList": []
         , "_airportStationsIDList": []
@@ -74,11 +74,11 @@ class PWSWeather(RMParser):
             stationName = self.params.get("customStationName")
             if stationName is None or not stationName or not isinstance(stationName, str):
                 stationName = ":auto"
-                log.error("using automatic location identifier")
+                log.info("Station name not valid, using automatic location identifier")
             limit = 10
         else:
             stationName = ":auto"
-            log.error("using automatic location identifier")
+            log.info("Station not set, using automatic location identifier")
             limit = 10
 
         stationName = stationName.replace(" ", "")
@@ -94,10 +94,12 @@ class PWSWeather(RMParser):
 
         if self.jsonResponse['success']:
             # populate nearby stations
+
             if self.params.get("useCustomStation") and self.params.get("customStationName"):
 
                 pass
             else:
+                log.debug("Getting nearby stations")
                 self.getNearbyStations(self.jsonResponse)
                 return
 
@@ -108,10 +110,12 @@ class PWSWeather(RMParser):
         elif self.params.get("useSolarRadiation"):
             log.warning("Unable to get solar radiation. You need to specify a pws.")
 
+        log.debug("self.parserForecast={}".format(self.parserForecast))
         if self.parserForecast:
             apiURL = \
                 "http://api.aerisapi.com/forecasts/" + stationName + "?&format=json&filter=mdnt2mdnt&limit=7" + \
                 "&client_id=" + str(clientID) + "&client_secret=" + str(secret)
+            log.debug("Getting forecast from {}".format(apiURL))
             self.jsonResponse = self.apiCall(apiURL)
 
             self.__getSimpleForecast()
@@ -419,6 +423,6 @@ class PWSWeather(RMParser):
         #    log.error("Unable to open Aeris URL")
 
 
-#if __name__ == "__main__":
-#    p = PWSWeather()
-#    p.perform()
+if __name__ == "__main__":
+    p = PWSWeather()
+    p.perform()
