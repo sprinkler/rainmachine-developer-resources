@@ -51,7 +51,35 @@ class AustraliaBOM(RMParser):
 
         return None
     
+    # These are apparently manually entered at the source, so typos etc are possible
+    def __getConditionFromWeather(self, weather):
+        condition = None
+        if weather == "Rain":
+            condition = RMParser.conditionType.LightRain
+        elif weather == "Showers":
+            condition = RMParser.conditionType.RainShowers
+        elif weather == "Smoke":
+            condition = RMParser.conditionType.Smoke
+        elif weather == "Fine":
+            condition = RMParser.conditionType.Fair
+        elif weather == "Fog":
+            condition = RMParser.conditionType.Fog
+        elif weather == "Haze":
+            condition = RMParser.conditionType.Haze
+        elif weather == "Recent precip.":
+            condition = RMParser.conditionType.ShowersInVicinity
+        elif weather == "Freezing rain":
+            condition = RMParser.conditionType.FreezingRain
+        elif weather == "Thunderstorm":
+            condition = RMParser.conditionType.Thunderstorm
+        elif weather == "Recent thunderstorm":
+            condition = RMParser.conditionType.ThunderstormInVicinity
+        else:
+            log.error("Unknown weather type %s", condition)
+            condition = None
+    
     # These are classed as "hourly results" in the API
+    # Incoming format documented here: http://reg.bom.gov.au/catalogue/Observations-XML.pdf
     def __getObservationData(self, state, observationArea):
         if self.parserDebug:
             log.debug("Getting observation data")
@@ -95,7 +123,7 @@ class AustraliaBOM(RMParser):
                 rh = None
                 wind = None # m/s
                 rain = None
-                pressure = None
+                pressure = None # kpa
                 dewpoint = None
                 condition = None
 
@@ -127,20 +155,7 @@ class AustraliaBOM(RMParser):
                         rh = self.__toFloat(element.text)
                     elif type == 'weather':
                         log.debug("Got %s for %s" % (element.text, type))
-                        condition = self.__toFloat(element.text)
-                        if condition == "Rain":
-                            condition = RMParser.conditionType.LightRain
-                        elif condition == "Showers":
-                            condition = RMParser.conditionType.RainShowers
-                        elif condition == "Smoke":
-                            condition = RMParser.conditionType.Smoke
-                        elif condition == "Fine":
-                            condition = RMParser.conditionType.Fair
-                        elif condition == "Recent precip.":
-                            condition = RMParser.conditionType.ShowersInVicinity
-                        else:
-                            log.error("Unknown weather type %s", condition)
-                            condition = None
+                        condition = self.__getConditionFromWeather(element.text)
                     elif type == 'wind_dir':
                         log.debug("Got %s for %s" % (element.text, type))
                     elif type == 'wind_dir_deg':
