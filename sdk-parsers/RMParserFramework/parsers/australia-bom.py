@@ -165,7 +165,7 @@ class AustraliaBOM(RMParser):
                         wind = self.__toFloat(element.text) / 3.6 # from km/h to m/s
                     elif type == 'wind_spd':
                         log.debug("Got %s for %s" % (element.text, type))
-                    elif type == 'rainfall':
+                    elif type == 'rainfall_24hr':
                         log.debug("Got %s for %s" % (element.text, type))
                     elif type == 'rainfall':
                         log.debug("Got %s for %s" % (element.text, type))
