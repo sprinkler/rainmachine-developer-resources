@@ -54,6 +54,8 @@ class AustraliaBOM(RMParser):
     # These are apparently manually entered at the source, so typos etc are possible
     def __getConditionFromWeather(self, weather):
         condition = None
+        # strip any trailing full stops
+        weather = weather.rtrim('.')
         if weather == "Rain":
             condition = RMParser.conditionType.LightRain
         elif weather == "Showers":
@@ -66,7 +68,7 @@ class AustraliaBOM(RMParser):
             condition = RMParser.conditionType.Fog
         elif weather == "Haze":
             condition = RMParser.conditionType.Haze
-        elif weather == "Recent precip.":
+        elif weather == "Recent precip":
             condition = RMParser.conditionType.ShowersInVicinity
         elif weather == "Freezing rain":
             condition = RMParser.conditionType.FreezingRain
@@ -74,6 +76,18 @@ class AustraliaBOM(RMParser):
             condition = RMParser.conditionType.Thunderstorm
         elif weather == "Recent thunderstorm":
             condition = RMParser.conditionType.ThunderstormInVicinity
+        elif weather == "Sunny":
+            condition = RMParser.conditionType.Hot
+        elif weather == "Mostly sunny":
+            condition = RMParser.conditionType.Fair
+        elif weather == "Partly cloudy":
+            condition = RMParser.conditionType.PartlyCloudy
+        elif weather == "Possible shower":
+            condition = RMParser.conditionType.ShowersInVicinity
+        elif weather == "Becoming cloudy":
+            condition = RMParser.conditionType.FewClouds
+        elif weather == "Cloudy":
+            condition = RMParser.conditionType.Overcast
         else:
             log.error("Unknown weather type %s", condition)
             condition = None
@@ -130,7 +144,7 @@ class AustraliaBOM(RMParser):
                 dewpoint = None
                 condition = None
 
-                for element in subnode.getiterator(tag = "element"):
+                for element in subnode.getiterator():
                     type = element.get("type")
                     if type == 'apparent_temp':
                         if self.parserDebug:
@@ -231,23 +245,23 @@ class AustraliaBOM(RMParser):
                         , (mintemp is None and '' or str(mintemp))
                         , (maxtemp is None and '' or str(maxtemp))))
                 
-                if temperature:
+                if temperature is not None:
                     self.addValue(RMParser.dataType.TEMPERATURE, timestamp, temperature)
-                if mintemp:
+                if mintemp is not None:
                     self.addValue(RMParser.dataType.MINTEMP, timestamp, mintemp)
-                if maxtemp:
+                if maxtemp is not None:
                     self.addValue(RMParser.dataType.MAXTEMP, timestamp, maxtemp)
-                if rh:
+                if rh is not None:
                     self.addValue(RMParser.dataType.RH, timestamp, rh)
-                if wind:
+                if wind is not None:
                     self.addValue(RMParser.dataType.WIND, timestamp, wind)
               #  if rain_timestamp:
               #      self.addValue(RMParser.dataType.RAIN, rain_timestamp, rain)
-                if rain_24hr_timestamp:
+                if rain_24hr_timestamp is not None:
                     self.addValue(RMParser.dataType.RAIN, rain_24hr_timestamp, rain_24hr)
-                if dewpoint:
+                if dewpoint is not None:
                     self.addValue(RMParser.dataType.DEWPOINT, timestamp, dewpoint)
-                if pressure:
+                if pressure is not None:
                     self.addValue(RMParser.dataType.PRESSURE, timestamp, pressure)
             if self.parserDebug:
                 log.debug(self.result)
@@ -337,9 +351,9 @@ class AustraliaBOM(RMParser):
                         except:
                             log.error("Cannot get probability_of_precipitation forecast (%s)" % element.text)
 
-                if mintemp:
+                if mintemp is not None:
                     self.addValue(RMParser.dataType.MINTEMP, subnodeTimestamp, mintemp)
-                if maxtemp:
+                if maxtemp is not None:
                     self.addValue(RMParser.dataType.MAXTEMP, subnodeTimestamp, maxtemp)
                 self.addValue(RMParser.dataType.POP, subnodeTimestamp, pop)
                 self.addValue(RMParser.dataType.QPF, subnodeTimestamp, qpfAvg)
