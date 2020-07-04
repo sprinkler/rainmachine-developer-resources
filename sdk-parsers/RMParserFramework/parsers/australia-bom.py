@@ -143,8 +143,9 @@ class AustraliaBOM(RMParser):
                 pressure = None # kpa
                 dewpoint = None
                 condition = None
+                skycover = None
 
-                for element in subnode.getiterator():
+                for element in subnode.getiterator(tag = "element"):
                     type = element.get("type")
                     if type == 'apparent_temp':
                         if self.parserDebug:
@@ -231,6 +232,29 @@ class AustraliaBOM(RMParser):
                         if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                         mintemp = self.__toFloat(element.text)
+                    elif type == 'cloud_oktas':
+                        # need to try and convert to a %
+                        oktas = int(element.text)
+                        if oktas == 0:
+                            skycover = 0.0
+                        elif oktas == 1:
+                            skycover = 0.0625
+                        elif oktas == 2:
+                            skycover = 0.1875  
+                        elif oktas == 3:
+                            skycover = 0.3125  
+                        elif oktas == 4:
+                            skycover = 0.4375  
+                        elif oktas == 5:
+                            skycover = 0.5625  
+                        elif oktas == 6:
+                            skycover = 0.6875   
+                        elif oktas == 7:
+                            skycover = 0.8125  
+                        elif oktas == 8:
+                            skycover = 0.875
+                        elif oktas == 9:
+                            skycover = 100.0     
                     elif self.parserDebug:
                         log.debug("Got unknown type %s" % type)
 
