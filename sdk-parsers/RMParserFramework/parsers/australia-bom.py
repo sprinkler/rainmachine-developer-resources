@@ -100,7 +100,7 @@ class AustraliaBOM(RMParser):
             return
 
         if self.parserDebug:
-            log.debug("Got data")
+            log.debug("Retrieved observation data from BOM")
 
         foundObservationArea = False
         xmldata = elementTree.parse(data)
@@ -122,9 +122,9 @@ class AustraliaBOM(RMParser):
                 temperature = None
                 rh = None
                 wind = None # m/s
-                rain = 0.0
+                rain = None
                 rain_timestamp = None
-                rain_24hr = 0.0
+                rain_24hr = None
                 rain_24hr_timestamp = None
                 pressure = None # kpa
                 dewpoint = None
@@ -133,59 +133,57 @@ class AustraliaBOM(RMParser):
                 for element in subnode.getiterator(tag = "element"):
                     type = element.get("type")
                     if type == 'apparent_temp':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                     elif type == 'delta_t':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                     elif type == 'air_temperature':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                         temperature = self.__toFloat(element.text)
                     elif type == 'dew_point':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                         dewpoint = self.__toFloat(element.text)
                     elif type == 'pres':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                         pressure = self.__toFloat(element.text) / 10 # convert hectaPa to kiloPa
                     elif type == 'msl_pres':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                     elif type == 'qnh_pres':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                     elif type == 'rain_hour':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                     elif type == 'rain_ten':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                     elif type == 'rel-humidity':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                         rh = self.__toFloat(element.text)
                     elif type == 'weather':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                         condition = self.__getConditionFromWeather(element.text)
                     elif type == 'wind_dir':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                     elif type == 'wind_dir_deg':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                     elif type == 'wind_spd_kmh':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                         wind = self.__toFloat(element.text) / 3.6 # from km/h to m/s
                     elif type == 'wind_spd':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                     elif type == 'rainfall_24hr':
-                        if parserDebug:
-                            log.debug("Got %s for %s" % (element.text, type))
                         rain_24hr = self.__toFloat(element.text)
                         elementDate = element.get("start-time-utc")
                         if not elementDate:
@@ -195,10 +193,11 @@ class AustraliaBOM(RMParser):
                             elementDate = elementDate.rstrip('0:').rstrip('+') # python doesn't seem to like %z
                                                                                # but we know its UTC so we don't need it
                             rain_24hr_timestamp = rmTimestampFromDateAsString(elementDate, '%Y-%m-%dT%H:%M:%S')
+                        if self.parserDebug:
+                            log.debug("Got %s for %s with a timestamp of %s" % (element.text, type, str(rain_24hr_timestamp)))
 
                     elif type == 'rainfall':
-                        if parserDebug:
-                            log.debug("Got %s for %s" % (element.text, type))
+
                         rain = self.__toFloat(element.text)
                         elementDate = element.get("start-time-utc")
                         if not elementDate:
@@ -208,18 +207,20 @@ class AustraliaBOM(RMParser):
                             elementDate = elementDate.rstrip('0:').rstrip('+') # python doesn't seem to like %z
                                                                                # but we know its UTC so we don't need it
                             rain_timestamp = rmTimestampFromDateAsString(elementDate, '%Y-%m-%dT%H:%M:%S')
+                        if self.parserDebug:
+                            log.debug("Got %s for %s with a timestamp of %s" % (element.text, type, str(rain_timestamp)))
                     elif type == 'maximum_air_temperature':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                         maxtemp = self.__toFloat(element.text)
                     elif type == 'minimum_air_temperature':
-                        if parserDebug:
+                        if self.parserDebug:
                             log.debug("Got %s for %s" % (element.text, type))
                         mintemp = self.__toFloat(element.text)
-                    elif parserDebug:
+                    elif self.parserDebug:
                         log.debug("Got unknown type %s" % type)
 
-                if parserDebug:
+                if self.parserDebug:
                     log.debug("Update temp: %s, rh: %s, Wind: %s, Rain: %s, Dewpoint: %s, Pressure: %s, min/max Temp: %s/%s " 
                         % ((temperature is None and '' or str(temperature))
                         , (rh is None and '' or str(rh))
@@ -230,9 +231,12 @@ class AustraliaBOM(RMParser):
                         , (mintemp is None and '' or str(mintemp))
                         , (maxtemp is None and '' or str(maxtemp))))
                 
-                self.addValue(RMParser.dataType.TEMPERATURE, timestamp, temperature)
-                self.addValue(RMParser.dataType.MINTEMP, timestamp, mintemp)
-                self.addValue(RMParser.dataType.MAXTEMP, timestamp, maxtemp)
+                if temperature:
+                    self.addValue(RMParser.dataType.TEMPERATURE, timestamp, temperature)
+                if mintemp:
+                    self.addValue(RMParser.dataType.MINTEMP, timestamp, mintemp)
+                if maxtemp:
+                    self.addValue(RMParser.dataType.MAXTEMP, timestamp, maxtemp)
                 if rh:
                     self.addValue(RMParser.dataType.RH, timestamp, rh)
                 if wind:
@@ -275,7 +279,7 @@ class AustraliaBOM(RMParser):
             return
 
         if self.parserDebug:
-            log.debug("Got data")
+            log.debug("Retrieved forecast file from BOM")
 
         foundForecastArea = False
         xmldata = elementTree.parse(data)
@@ -296,44 +300,51 @@ class AustraliaBOM(RMParser):
                 subnodeDate = subnode.get("start-time-utc")
                 subnodeTimestamp = rmTimestampFromDateAsString(subnodeDate, '%Y-%m-%dT%H:%M:%SZ')
                 log.info("forecast-period time - %s" % subnodeDate)
-                for element in subnode.getiterator(tag = "element"):
-                    mint = None
-                    maxt = None
-                    qpfMin = None
-                    qpfMax = None
-                    qpfAvg = None
-                    pop = None
+                mintemp = None
+                maxtemp = None
+                qpfAvg = 0.0 # No entry should mean no expected rainfall.
+                pop = 0.0 # No entry should mean no expected rainfall.
 
+                for element in subnode.getiterator():
                     type = element.get("type")
                     if type == "air_temperature_minimum":
                         try:
-                            mint = self.__toFloat(element.text)
-                            log.info("\tMin Temp: %s" % mint)
-                            self.addValue(RMParser.dataType.MINTEMP, subnodeTimestamp, mint)
+                            mintemp = self.__toFloat(element.text)
+                            if self.parserDebug:
+                                log.debug("\tMin Temp: %s" % mintemp)
                         except:
-                            log.error("Cannot get minimum temperature")
+                            log.error("Cannot get minimum temperature (%s)" % element.text)
                     elif type == "air_temperature_maximum":
                         try:
-                            maxt = self.__toFloat(element.text)
-                            self.addValue(RMParser.dataType.MAXTEMP, subnodeTimestamp, maxt)
-                            log.info("\tMax Temp: %s" % maxt)
+                            maxtemp = self.__toFloat(element.text)
+                            if self.parserDebug:
+                                log.debug("\tMax Temp: %s" % maxtemp)
                         except:
-                            log.error("Cannot get max temperature")
+                            log.error("Cannot get max temperature (%s)" % element.text)
                     elif type == "precipitation_range":
                         try:
                             qpfMin, _, qpfMax, _ = element.text.split() # will result in ['15', 'to', '35', 'mm']
                             qpfAvg = (self.__toFloat(qpfMin) + self.__toFloat(qpfMax))/2
-                            log.info("\tQPF Avg: %s" % qpfAvg)
-                            self.addValue(RMParser.dataType.QPF, subnodeTimestamp, qpfAvg)
+                            if self.parserDebug:
+                               log.debug("\tQPF Avg: %s" % qpfAvg)
                         except:
-                            log.error("Cannot get precipitation forecast")
+                            log.error("Cannot get precipitation forecast (%s)" % element.text)
                     elif type == "probability_of_precipitation":
                         try:
                             pop =  self.__toInt(element.text.rstrip('%'))
-                            log.info("\POP: %s" % qpfAvg)
-                            self.addvalue(RMParser.dataType.POP, subnodeTimestamp, pop)
+                            if self.parserDebug:
+                               log.debug("\tPOP: %s" % pop)
                         except:
-                            log.error("Cannot get probability_of_precipitation forecast")
+                            log.error("Cannot get probability_of_precipitation forecast (%s)" % element.text)
+
+                if mintemp:
+                    self.addValue(RMParser.dataType.MINTEMP, subnodeTimestamp, mintemp)
+                if maxtemp:
+                    self.addValue(RMParser.dataType.MAXTEMP, subnodeTimestamp, maxtemp)
+                self.addValue(RMParser.dataType.POP, subnodeTimestamp, pop)
+                self.addValue(RMParser.dataType.QPF, subnodeTimestamp, qpfAvg)
+
+
                     
                 if self.parserDebug:
                     # Sometimes we get a forecast result in the past, however addValue will not add a historical value, so we might get
@@ -356,7 +367,7 @@ class AustraliaBOM(RMParser):
 
         self.__getObservationData( self.params["State"], self.params["Observation Area"])
 
-        if parserDebug:
+        if self.parserDebug:
             log.debug("Parsing done")
             if self.parserDebug:
                 for time_period in self.result:
