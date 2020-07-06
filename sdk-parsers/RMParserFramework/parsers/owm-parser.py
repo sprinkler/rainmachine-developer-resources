@@ -110,23 +110,17 @@ class OpenWeatherMap(RMParser):
             self.addValue(RMParser.dataType.RH, timestamp, humidity)
             self.addValue(RMParser.dataType.PRESSURE, timestamp, pressure)
 
-            qpf = None
             if "rain" in entry:
-                qpf = entry["rain"].get("3h")
+                qpf = entry["rain"].get("3h", None)
+                self.addValue(RMParser.dataType.QPF, timestamp, qpf)
 
-            self.addValue(RMParser.dataType.QPF, timestamp, qpf)
-
-            wind = None
             if "wind" in entry:
-                wind = entry["wind"].get("speed")
+                wind = entry["wind"].get("speed", None)
+                self.addValue(RMParser.dataType.WIND, timestamp, wind)
 
-            self.addValue(RMParser.dataType.WIND, timestamp, wind)
-
-            icon = None
             if entry["weather"][0]:
                 icon = self.conditionConvert(entry["weather"][0].get("id"))
-
-            self.addValue(RMParser.dataType.CONDITION, timestamp, icon)
+                self.addValue(RMParser.dataType.CONDITION, timestamp, icon)
 
         if self.parserDebug:
             log.debug(self.result)
