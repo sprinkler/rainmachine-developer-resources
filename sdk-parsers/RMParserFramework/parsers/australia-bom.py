@@ -15,8 +15,6 @@ class AustraliaBOM(RMParser):
     parserHistorical = True
     parserDebug = True                      # Don't show extra debug messages
 
-    useLocalTime = True                     # Using UTC seems wrong and seems to disagree with
-                                            # other parsers, but was what was here originally
     longitude = None
     latitude = None
 
@@ -1035,10 +1033,7 @@ class AustraliaBOM(RMParser):
         jsonContent = json.loads(data.read())
 
         for observation in jsonContent['observations']['data']:
-            if observation['local_date_time_full'] is None:
-                log.error("Failed to find timestamp, skipping record")
-                continue            
-            timestamp = calendar.timegm(time.strptime(observation['local_date_time_full'], '%Y%m%d%H%M%S'))
+            timestamp = calendar.timegm(time.strptime(observation['aifstime_utc'], '%Y%m%d%H%M%S'))
             debug_str=""
             for key in observation:
                 value = observation[key]
@@ -1122,13 +1117,8 @@ class AustraliaBOM(RMParser):
                 observation_timestamp = sorted(self.result).pop()
 
             for subnode in node.getiterator(tag = "forecast-period"):
-                if self.useLocalTime:
-                    subnodeDate = subnode.get("start-time-local")
-                    subnodeDate = subnodeDate.rstrip('01:').rstrip('+') # python doesn't seem to like %z
-                    subnodeTimestamp = rmTimestampFromDateAsString(subnodeDate, '%Y-%m-%dT%H:%M:%S')
-                else:
-                    subnodeDate = subnode.get("start-time-utc")
-                    subnodeTimestamp = rmTimestampFromDateAsString(subnodeDate, '%Y-%m-%dT%H:%M:%SZ')
+                subnodeDate = subnode.get("start-time-utc")
+                subnodeTimestamp = rmTimestampFromDateAsString(subnodeDate, '%Y-%m-%dT%H:%M:%SZ')
                 
                 # We have more recent observation data, skip incomplete forecast data
                 if observation_timestamp is not None and observation_timestamp > subnodeTimestamp:
