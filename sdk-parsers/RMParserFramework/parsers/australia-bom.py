@@ -17,12 +17,12 @@ class AustraliaBOM(RMParser):
 
     useLocalTime = True                     # Using UTC seems wrong and seems to disagree with
                                             # other parsers, but was what was here originally
+    longitude = None
+    latitude = None
 
     defaultParams = {"Forecast Area": "Terrey Hills" 
-                , "Observation Area": "Sydney - Observatory Hill"
                 , "State" : "NSW" } 
     params = {"Forecast Area": "Terrey Hills"
-                , "Observation Area": "Sydney - Observatory Hill"
                 , "State" : "NSW" }         # Internal params that can be changed with API call /parser/{id}/params
 
     def isEnabledForLocation(self, timezone, lat, long):
@@ -887,9 +887,7 @@ class AustraliaBOM(RMParser):
                 code = 'T'
             elif wmo['state'] == "NT":
                 code = 'D'
-            return (True, "http://www.bom.gov.au/fwo/ID" + code + "60801/ID" + code + "60801." + str(wmo['id']) + ".json")
-        if state == "NSW":
-            return (False, "ftp://ftp.bom.gov.au/anon/gen/fwo/IDN60920.xml")
+            return "http://www.bom.gov.au/fwo/ID" + code + "60801/ID" + code + "60801." + str(wmo['id']) + ".json"
 
         return None
     
@@ -1054,68 +1052,12 @@ class AustraliaBOM(RMParser):
                 else:
                     log.info("Did not find: %s" % timestamp)
 
-    def __parseXMLObservationData(self, data, observationArea):
-        foundObservationArea = False
-        xmldata = elementTree.parse(data)
-        for node in xmldata.getroot().getiterator(tag = "station"):
-            if self.parserDebug:
-                log.debug("Got a node of %s" % node.attrib['description'])
-            if node.attrib['description'] != observationArea:
-                continue
-            foundObservationArea = True
-
-            for subnode in node.getiterator(tag = "period"):
-                if self.useLocalTime:
-                    subnodeDate = subnode.get('time-local')
-                else:
-                    subnodeDate = subnode.get("time-utc")
-
-                subnodeDate = subnodeDate.rstrip('01:').rstrip('+') # strip the timezone, python doesn't understand %z
-                timestamp = rmTimestampFromDateAsString(subnodeDate, '%Y-%m-%dT%H:%M:%S')
-                log.info("Observation time: %s (%s)" % (subnodeDate, "local" if self.useLocalTime else "utc"))
-                debug_str=""
-                for element in subnode.getiterator(tag = "element"):
-                    if type == 'rainfall_24hr':
-                        if self.useLocalTime:
-                            elementDate = element.get("end-time-local")
-                        else:
-                            elementDate = element.get("end-time-utc")
-                        if not elementDate:
-                            log.error("Failed to find element date: %s" % element)
-                            rain_24hr_timestamp = timestamp
-                        else:
-                            elementDate = elementDate.rstrip('01:').rstrip('+') # python doesn't seem to like %z
-                                                                            # but we know its UTC so we don't need it
-                            rain_24hr_timestamp = rmTimestampFromDateAsString(elementDate, '%Y-%m-%dT%H:%M:%S')
-                        debug_str=self.__parseObservationValue(element.get("type"), element.text, rain_24hr_timestamp, debug_str)
-                    elif type == 'rainfall':
-                        if self.useLocalTime:
-                            elementDate = element.get('end-time-local')
-                        else:
-                            elementDate = element.get("end-time-utc")
-                        if not elementDate:
-                            log.error("Failed to find element date: %s" % element)
-                            rain_timestamp = timestamp
-                        else:
-                            elementDate = elementDate.rstrip('01:').rstrip('+') # python doesn't seem to like %z
-                                                                            # but we know its UTC so we don't need it
-                            rain_timestamp = rmTimestampFromDateAsString(elementDate, '%Y-%m-%dT%H:%M:%S')
-                        debug_str=self.__parseObservationValue(element.get("type"), element.text, rain_timestamp, debug_str)
-                    else:
-                        debug_str=self.__parseObservationValue(element.get("type"), element.text, timestamp, debug_str)
-                if self.parserDebug:
-                    log.info(debug_str)
-            break
-        if foundObservationArea == False:
-            self.lastKnownError = "Failed to find Observation Area"
-            return
-
     # These are classed as "hourly results" in the API
     # Incoming format documented here: http://reg.bom.gov.au/catalogue/Observations-XML.pdf
-    def __getObservationData(self, state, observationArea):
+    def __getObservationData(self, state):
         if self.parserDebug:
             log.debug("Getting observation data")
-        (isJSONData, URL) = self.__getObservationURLForState(state)
+        URL = self.__getObservationURLForState(state)
 
         if URL == None:
             self.lastKnownError = "Error: Only NSW supported"
@@ -1134,10 +1076,7 @@ class AustraliaBOM(RMParser):
 
         if self.parserDebug:
             log.debug("Retrieved observation data from BOM")
-        if isJSONData:
-            self.__parseJSONObservationData(data)
-        else:
-            self.__parseXMLObservationData(data, observationArea)
+        self.__parseJSONObservationData(data)
          
 
     def __getForecastData(self, state, forecastArea):
@@ -1261,7 +1200,7 @@ class AustraliaBOM(RMParser):
             self.longitude = self.settings.location.longitude
             
 
-        self.__getObservationData( self.params["State"], self.params["Observation Area"])
+        self.__getObservationData(self.params["State"])
         self.__getForecastData( self.params["State"], self.params["Forecast Area"])
 
         if self.parserDebug:
@@ -1299,7 +1238,4 @@ class AustraliaBOM(RMParser):
 
 if __name__  == '__main__':
     p = AustraliaBOM()
-    # Uncomment these for testing
-    p.latitude = -33.3287064
-    p.longitude = 151.1041525
     p.perform()
