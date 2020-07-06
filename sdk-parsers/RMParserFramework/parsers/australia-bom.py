@@ -18,7 +18,7 @@ class AustraliaBOM(RMParser):
     useLocalTime = True                     # Using UTC seems wrong and seems to disagree with
                                             # other parsers, but was what was here originally
 
-    defaultParams = {"Forecast Area": "Terrey Hills"
+    defaultParams = {"Forecast Area": "Terrey Hills" 
                 , "Observation Area": "Sydney - Observatory Hill"
                 , "State" : "NSW" } 
     params = {"Forecast Area": "Terrey Hills"
@@ -1299,6 +1299,7 @@ class AustraliaBOM(RMParser):
 
 if __name__  == '__main__':
     p = AustraliaBOM()
-    p.latitude = -33.8287064
-    p.longitude = 151.2041525
+    # Uncomment these for testing
+    p.latitude = -33.3287064
+    p.longitude = 151.1041525
     p.perform()
