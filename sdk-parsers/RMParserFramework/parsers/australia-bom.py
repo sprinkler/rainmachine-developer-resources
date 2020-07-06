@@ -15,7 +15,7 @@ class AustraliaBOM(RMParser):
     parserHistorical = True
     parserDebug = True                      # Don't show extra debug messages
 
-    useLocalTime = True                     # Using UTC seems wrong and seems to disagree with
+    useLocalTime = False                     # Using UTC seems wrong and seems to disagree with
                                             # other parsers, but was what was here originally
     longitude = None
     latitude = None
@@ -1035,10 +1035,13 @@ class AustraliaBOM(RMParser):
         jsonContent = json.loads(data.read())
 
         for observation in jsonContent['observations']['data']:
-            if observation['local_date_time_full'] is None:
-                log.error("Failed to find timestamp, skipping record")
-                continue            
-            timestamp = calendar.timegm(time.strptime(observation['local_date_time_full'], '%Y%m%d%H%M%S'))
+            if self.useLocalTime:
+                if observation['local_date_time_full'] is None:
+                    log.error("Failed to find timestamp, skipping record")
+                    continue            
+                timestamp = calendar.timegm(time.strptime(observation['local_date_time_full'], '%Y%m%d%H%M%S'))
+            else:
+                timestamp = calendar.timegm(time.strptime(observation['aifstime_utc'], '%Y%m%d%H%M%S'))
             debug_str=""
             for key in observation:
                 value = observation[key]
