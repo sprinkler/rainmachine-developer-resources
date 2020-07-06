@@ -89,6 +89,7 @@ class AustraliaBOM(RMParser):
         # filtered on files that are available, and ones that have temp and rain
         # Sites with air temp ftp://ftp.bom.gov.au/anon2/home/ncc/metadata/lists_by_element/alpha/alphaAUS_3.txt
         # Sites with rain ftp://ftp.bom.gov.au/anon2/home/ncc/metadata/lists_by_element/alpha/alphaAUS_139.txt
+        # Some sites don't have files. I removed them (I don't get it)
         wmo_locations = {
             ("ADELAIDE (KENT TOWN)", -34.921100, 138.621600, "SA", 94675),
             ("ADELAIDE (WEST TERRACE / NGAYIRDAPIRA)", -34.925700, 138.583200, "SA", 94648),
@@ -868,10 +869,8 @@ class AustraliaBOM(RMParser):
         # 60801 must be a product ID
         # bom-id can be looked up here: http://www.bom.gov.au/climate/cdo/about/sitedata.shtml
         # wmo-id can be looked up here: http://www.bom.gov.au/climate/data/stations/
-        # wmo-id can be looked up by lat/lon, so maybe we can use that instead of this hokey setup.
         # Full list of sites here: ftp://ftp.bom.gov.au/anon2/home/ncc/metadata/sitelists/stations.zip contains both bom-id and wmo-id
         # Note that detailed observations only available for sites with both id's.
-        #  066062 66    SYDNEY (OBSERVATORY HILL)                   1858      .. -33.8607  151.2050 GPS            NSW       39.0     40.2  94768
         if self.longitude is not None and self.latitude is not None:
             wmo = self.__getNearestWMO(self.latitude, self.longitude)
             code = None
@@ -1192,9 +1191,7 @@ class AustraliaBOM(RMParser):
 
     # The function that will be executed must have this name
     def perform(self):
-        # downloading data from a URL convenience function since other python libraries can be used
-        # Each xml file contains a small subset of locations, need to figure out the right location
-        # http://reg.bom.gov.au/other/Ftp.shtml
+        # settings is a dict when run outside of the full code base, so use that to check if we can fetch from self.settings.location or not
         if not isinstance(self.settings, dict):
             self.latitude = self.settings.location.latitude
             self.longitude = self.settings.location.longitude
