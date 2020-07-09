@@ -8,6 +8,7 @@ import json
 class AustraliaBOM(RMParser):
     parserName = "Australia BoM"         # Your parser name
     parserDescription = " Commonwealth of Australia Bureau of Meteorology" # A description for this parser
+    # file schema described here http://www.bom.gov.au/schema/doc/AMOC_V1.pdf
 
     parserEnabled = True
     parserInterval = 3600                    # Your parser running interval in seconds
@@ -46,6 +47,7 @@ class AustraliaBOM(RMParser):
             URL = "ftp://ftp.bom.gov.au/anon/gen/fwo/IDW14199.xml"
 
         return URL
+
     def __distanceBetween(self, origin, destination):
         """
         Calculate the Haversine distance.
@@ -931,12 +933,56 @@ class AustraliaBOM(RMParser):
             log.error("Unknown weather type %s", condition)
             condition = None
     
+    def __getValue(self, key, timestamp):
+        timestamp = timestamp - (timestamp % 3600)
+
+        if timestamp not in self.result:
+            return None
+        record = self.result[timestamp]
+
+        # Usually I'd use __dict__ to fetch these results, but the names inside the dict don't match the enum names    
+        if key == RMParser.dataType.TEMPERATURE:
+            return record.temperature 
+        elif key == RMParser.dataType.MINTEMP:
+            return record.minTemperature 
+        elif key == RMParser.dataType.MAXTEMP:
+            return record.maxTemperature 
+        elif key == RMParser.dataType.RH:
+            return record.rh 
+        elif key == RMParser.dataType.MINRH:
+            return record.minRh 
+        elif key == RMParser.dataType.MAXRH:
+            return record.maxRh 
+        elif key == RMParser.dataType.WIND:
+            return record.wind 
+        elif key == RMParser.dataType.SOLARRADIATION:
+            return record.solarRad 
+        elif key == RMParser.dataType.SKYCOVER:
+            return record.skyCover 
+        elif key == RMParser.dataType.RAIN:
+            return record.rain 
+        elif key == RMParser.dataType.ET0:
+            return record.et0 
+        elif key == RMParser.dataType.POP:
+            return record.pop 
+        elif key == RMParser.dataType.QPF:
+            return record.qpf 
+        elif key == RMParser.dataType.PRESSURE:
+            return record.pressure 
+        elif key == RMParser.dataType.DEWPOINT:
+            return record.dewPoint 
+        else:
+            return None
+
     def __parseObservationValue(self, type, value, timestamp, debug_str):
+        # Observations are over a 30 minute period usually, and we round the timestamp
+        # down to the nearest hour. This means we lose some data, so we check if a value 
+        # exists and either average or sum the old value.
         if debug_str is None:
             debug_str=""
         if timestamp is None:
             return debug_str
-        if value is None:
+        if value is None or value is '-':
             debug_str += type + ": None " 
             return debug_str
 
@@ -946,12 +992,21 @@ class AustraliaBOM(RMParser):
             debug_str += type + ": " + str(value) + " " 
         elif type == 'air_temperature' or type == 'air_temp':
             debug_str += type + ": " + str(value) + " " 
+            old_value = self.__getValue(RMParser.dataType.TEMPERATURE, timestamp)
+            if old_value is not None:
+                value = (self.__toFloat(value) + old_value) / 2
             self.addValue(RMParser.dataType.TEMPERATURE, timestamp, self.__toFloat(value))
         elif type == 'dew_point' or type == 'dewpt':
             debug_str += type + ": " + str(value) + " " 
+            old_value = self.__getValue(RMParser.dataType.DEWPOINT, timestamp)
+            if old_value is not None:
+                value = (self.__toFloat(value) + old_value) / 2
             self.addValue(RMParser.dataType.DEWPOINT, timestamp, self.__toFloat(value))
         elif type == 'pres' or type == 'press':
             debug_str += type + ": " + str(value) + " " 
+            old_value = self.__getValue(RMParser.dataType.PRESSURE, timestamp)
+            if old_value is not None:
+                value = (self.__toFloat(value) + old_value) / 2
             self.addValue(RMParser.dataType.PRESSURE, timestamp, self.__toFloat(value) / 10) # convert hectaPa to kiloPa
         elif type == 'msl_pres' or type == 'press_msl':
             debug_str += type + ": " + str(value) + " " 
@@ -965,6 +1020,9 @@ class AustraliaBOM(RMParser):
             debug_str += type + ": " + str(value) + " " 
         elif type == 'rel-humidity' or type == 'rel_hum':
             debug_str += type + ": " + str(value) + " " 
+            old_value = self.__getValue(RMParser.dataType.RH, timestamp)
+            if old_value is not None:
+                value = (self.__toFloat(value) + old_value) / 2
             self.addValue(RMParser.dataType.RH, timestamp, self.__toFloat(value))
         elif type == 'weather':
             debug_str += type + ": " + str(value) + " " 
@@ -976,7 +1034,10 @@ class AustraliaBOM(RMParser):
         elif type == 'wind_dir_deg':
             debug_str += type + ": " + str(value) + " " 
         elif type == 'wind_spd_kmh':
-            debug_str += type + ": " + str(value) + " " 
+            debug_str += type + ": " + str(value) + " "
+            old_value = self.__getValue(RMParser.dataType.WIND, timestamp)
+            if old_value is not None:
+                value = (self.__toFloat(value) + old_value) / 2 
             self.addValue(RMParser.dataType.WIND, timestamp,  self.__toFloat(value) / 3.6) # from km/h to m/s
         elif type == 'wind_spd' or type == 'wind_spd_kt':
             debug_str += type + ": " + str(value) + " " 
@@ -984,11 +1045,18 @@ class AustraliaBOM(RMParser):
             # Rainfall for the preceeding 24hr till 9am
             rain_24hr = self.__toFloat(value)
             debug_str += type + ": " + str(value) + " " 
+            old_value = self.__getValue(RMParser.dataType.RAIN, timestamp)
+            if old_value is not None:
+                value = (self.__toFloat(value) + old_value)
             self.addValue(RMParser.dataType.RAIN, timestamp,  self.__toFloat(value))
         elif type == 'rainfall' or type == 'rain_trace':
             # Rainfall since 9am today
             rain = self.__toFloat(value)
             debug_str += type + ": " + str(value) + " " 
+            # NOTE: We SUM these two values to get the total for the 60 minute period.
+            old_value = self.__getValue(RMParser.dataType.RAIN, timestamp)
+            if old_value is not None:
+                value = (self.__toFloat(value) + old_value)
             self.addValue(RMParser.dataType.RAIN, timestamp,  self.__toFloat(value))
         elif type == 'maximum_air_temperature':
             debug_str += type + ": " + str(value) + " " 
@@ -1041,6 +1109,7 @@ class AustraliaBOM(RMParser):
                 debug_str=self.__parseObservationValue(key, value, timestamp, debug_str)
             if self.parserDebug:
                 log.info(debug_str)
+                timestamp = timestamp - (timestamp % 3600)
                 if timestamp in self.result:
                     self.__outputData(timestamp)
                 else:
@@ -1198,9 +1267,14 @@ class AustraliaBOM(RMParser):
        
 
     def __toFloat(self, value):
-        if value is None:
-            return value
-        return float(value)
+        try:
+            if value is None:
+                return value
+            return float(value)
+        except:
+            log.warn("Failed to convert %s into a float" % value)
+            return None
+
     def __toInt(self, value):
         if value is None:
             return value
@@ -1225,4 +1299,6 @@ class AustraliaBOM(RMParser):
 
 if __name__  == '__main__':
     p = AustraliaBOM()
+    p.latitude = -33.854816
+    p.longitude = 151.216454
     p.perform()
