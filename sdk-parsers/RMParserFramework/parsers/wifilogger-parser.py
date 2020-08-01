@@ -167,7 +167,6 @@ class WifiLogger(RMParser):
             self.addValue(RMParser.dataType.CONDITION, timestamp, RMParser.conditionType.MostlyCloudy)
             log.debug("Current Condition Mostly Cloudy")
 
-
         # here lets check rain rate
         if (0 < RAINRATE <= 0.098):
             self.addValue(RMParser.dataType.CONDITION, timestamp, RMParser.conditionType.LightRain)
