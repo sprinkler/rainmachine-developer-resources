@@ -7,12 +7,13 @@
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmUtils import distanceBetweenGeographicCoordinatesAsKm
 from RMUtilsFramework.rmLogging import log
+from RMOSGlue.rmOSPlatform import RMOSPlatform
 from RMUtilsFramework.rmUtils import convertKnotsToMS
 from RMUtilsFramework.rmTimeUtils import rmCurrentTimestamp
 
 class PWS(RMParser):
-    parserName = "PWS Parser"
-    parserDescription = "Personal Weather Station direct data download in pws format"
+    parserName = "WeatherDisplay Parser"
+    parserDescription = "Personal Weather Station direct data download in WeatherDisplay raw format"
     parserForecast = False
     parserHistorical = True
     parserEnabled = False
@@ -24,9 +25,13 @@ class PWS(RMParser):
         return PWS.parserEnabled
 
     def distanceToStation(self, lat, lon):
-        s = self.settings
-        llat = s.location.latitude
-        llon = s.location.longitude
+        if RMOSPlatform().AUTODETECTED == RMOSPlatform.SIMULATED:
+            llat = 47.1550897
+            llon = 27.5815751
+        else:
+            s = self.settings
+            llat = s.location.latitude
+            llon = s.location.longitude
         return distanceBetweenGeographicCoordinatesAsKm(lat, lon, llat, llon)
 
     def perform(self):

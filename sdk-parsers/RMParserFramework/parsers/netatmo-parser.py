@@ -64,13 +64,16 @@ class Netatmo(RMParser):
             self.password = self.params["password"]
             self.clientOauth()
 
-        if self.accessToken is None:
-            self.clientOauth()
-        else:
+        # Try to refresh the access token first if a previous one exists
+        if self.accessToken is not None:
             self.renewAccesTokenIfNeeded()
 
         if self.accessToken is None:
-            self.lastKnownError = "Error: Cannot retrieve OAuth token."
+            log.info("Doing full auth")
+            self.clientOauth()
+
+        if self.accessToken is None:
+            self.lastKnownError = "Error: Authentication failure"
             log.error(self.lastKnownError)
             return
 
@@ -78,24 +81,57 @@ class Netatmo(RMParser):
 
         tsStartOfDayUTC = rmCurrentDayTimestamp()
 
+        if len(self.jsonData["body"]["devices"]) == 0:
+             self.lastKnownError = "No NetAtmo devices found"
+             log.error(self.lastKnownError)
+             return
+
+        # Get available modules from returned json
+        self.buildAvailableModules()
+
+        # Build the list of user specified modules
         specifiedModules = []
         if self.params["useSpecifiedModules"]:
             modulesString = self.params["specificModules"]
             specifiedModules = modulesString.split(',')
             specifiedModules = [item.strip() for item in specifiedModules]
 
+        # Only use the first reported device which should be user device if user didn't specify modules
+        # Otherwise we will have multiple reports that we need to collate data from multiple devices
+        # and multiple modules
 
-        # Only use the first reported device which should be user device, others are devices owned by other users
-        # and shared with current user
-        if len(self.jsonData["body"]["devices"]) == 0:
-             self.lastKnownError = "No NetAtmo devices found"
-             log.error(self.lastKnownError)
-             return
+        if self.params["useSpecifiedModules"]:
+            for device in self.jsonData["body"]["devices"]:
+                self.getDeviceData(device, specifiedModules)
+        else:
+            self.getDeviceData(self.jsonData["body"]["devices"][0], specifiedModules)
 
-        device = self.jsonData["body"]["devices"][0]
+    def buildAvailableModules(self):
+        self.params["_availableModules"] = []
+        for device in self.jsonData["body"]["devices"]:
+            modules = device["modules"]
+            deviceName = device["station_name"]
+            deviceLoc = str(round(device["place"]["location"][0], 2)) + "," + str(round(device["place"]["location"][1], 2))
+            for module in modules:
+                moduleName = 'unnamed'
+                try:
+                    moduleName = module["module_name"]
+                except:
+                    pass
+                moduleID = module["_id"]
+                moduleDataType = module["data_type"]
 
-        name = device["station_name"] #put as output parameter?
-        [llat, llon] = device["place"]["location"] #use for max distance
+                if "CO2" in moduleDataType:
+                    continue
+
+                if ("Temperature" not in moduleDataType) and ("Rain" not in moduleDataType) and ("Wind" not in moduleDataType):
+                    continue
+
+                self.params["_availableModules"].append([moduleName, moduleID, deviceName, deviceLoc])
+
+    def getDeviceData(self, device, specifiedModules):
+        name = device["station_name"] # put as output parameter?
+        [llat, llon] = device["place"]["location"] # use for max distance
         deviceID = device["_id"]
         modules = device["modules"]
         minRH = 0
@@ -114,22 +150,24 @@ class Netatmo(RMParser):
         # idxPress = 0
         idxWind = 0
         idxRain = 0
-        self.params["_availableModules"] = []
         for module in modules:
             moduleName = 'unnamed'
             try:
                 moduleName = module["module_name"]
             except:
                 pass
+
             moduleID = module["_id"]
-            self.params["_availableModules"].append([moduleName , moduleID] )
             moduleDataType = module["data_type"]
 
             if self.params["useSpecifiedModules"]:
                 if moduleID not in specifiedModules:
                     continue
-            elif "outdoor" not in moduleName.lower() and ("Rain" not in moduleDataType) and ("Wind" not in moduleDataType):
-                continue
+            else:
+                if "CO2" in moduleDataType: # This will skip indoor base station
+                    continue
+                if ("Temperature" not in moduleDataType) and ("Rain" not in moduleDataType) and ("Wind" not in moduleDataType):
+                    continue
 
             if "Rain" in moduleDataType:
                 try:
@@ -187,7 +225,6 @@ class Netatmo(RMParser):
         if idxRain > 0 and tsRain is not None:
             self.addValue(RMParser.dataType.RAIN, tsRain, rain/idxRain)
 
-
     def renewAccesTokenIfNeeded(self):
         try:
             if self.accessTokenExpiration < time.time():
@@ -201,8 +238,14 @@ class Netatmo(RMParser):
                 self.accessToken = response['access_token']
                 self.refreshToken = response['refresh_token']
                 self.accessTokenExpiration = int(response['expire_in']) + time.time()
+                return True
         except:
-            log.error("Failed to refresh token")
+            log.error("Failed to refresh token.")
+            self.accessToken = None
+            self.refreshToken = None
+            self.accessTokenExpiration = 0
+
+        return False
 
     def clientOauth(self):
         postParams = {
@@ -219,7 +262,10 @@ class Netatmo(RMParser):
             self.refreshToken = resp['refresh_token']
             self.accessTokenExpiration = int(resp['expire_in']) + time.time()
         except:
-            log.error("Failed to get oauth token")
+            log.error("Failed to get oAuth token")
+            return False
+
+        return True
 
     def getData(self):
         postParams = {
@@ -238,8 +284,12 @@ class Netatmo(RMParser):
             "date_end" : rmCurrentDayTimestamp() - 1,
             "real_time" : True
         }
-        jsonData = self.postRequest(self.getMeasureUrl, postParams)
-        return jsonData
+        try:
+            jsonData = self.postRequest(self.getMeasureUrl, postParams)
+            return jsonData
+        except:
+            return None
+
 
     def postRequest(self, url, params):
         params = urlencode(params)
@@ -283,3 +333,7 @@ class Netatmo(RMParser):
             return int(value)
         except:
             return None
+
+if __name__ == "__main__":
+    p = Netatmo()
+    p.perform()

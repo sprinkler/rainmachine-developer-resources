@@ -74,18 +74,18 @@ class WifiLogger(RMParser):
         self.addValue(RMParser.dataType.MAXTEMP, timestamp, MAXTEMP)
 
         # RH = "RH"  # [percent]
-        RH = current_weather_data["humout"]
+        RH = int(current_weather_data["humout"])
         log.debug("RH: %s" % (RH))
         self.addValue(RMParser.dataType.RH, timestamp, RH)
 
         hltempout = current_weather_data["hlhumout"]
         # MINRH = "MINRH"  # [percent]
-        MINRH = hltempout[0]
+        MINRH = int(hltempout[0])
         log.debug("MINRH: %s" % (MINRH))
         self.addValue(RMParser.dataType.MINRH, timestamp, MINRH)
 
         # MAXRH = "MAXRH"  # [percent]
-        MAXRH = hltempout[1]
+        MAXRH = int(hltempout[1])
         log.debug("MAXRH: %s" % (MAXRH))
         self.addValue(RMParser.dataType.MAXRH, timestamp, MAXRH)
 
@@ -166,7 +166,6 @@ class WifiLogger(RMParser):
         elif ((currentConditionValue == 2) or (currentConditionValue == 3) or (currentConditionValue == 18) or (currentConditionValue == 19)):
             self.addValue(RMParser.dataType.CONDITION, timestamp, RMParser.conditionType.MostlyCloudy)
             log.debug("Current Condition Mostly Cloudy")
-
 
         # here lets check rain rate
         if (0 < RAINRATE <= 0.098):

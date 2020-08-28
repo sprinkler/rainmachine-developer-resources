@@ -33,7 +33,7 @@ class METNO(RMParser):
 
     def perform(self):
         s = self.settings
-        URL = "http://api.met.no/weatherapi/locationforecastlts/1.3/"
+        URL = "https://api.met.no/weatherapi/locationforecastlts/1.3/"
         URLParams = [("lat", s.location.latitude),
                   ("lon", s.location.longitude),
                   ("msl", int(round(s.location.elevation)))]
@@ -106,8 +106,8 @@ class METNO(RMParser):
                 intervalEndTimestamp = rmTimestampFromUTCDateAsString(to_time, dateFormat)
 
                 if intervalStartTimestamp < todayTimestamp:
-                    log.info("From: %s To: %s" % (from_time, to_time))
-                    log.info("*** Local conversion of start timestamp (%s) in the past skipping ..." % from_time)
+                    #log.info("From: %s To: %s" % (from_time, to_time))
+                    #log.info("*** Local conversion of start timestamp (%s) in the past skipping ..." % from_time)
                     continue
 
                 localStartDate = rmTimestampToDate(intervalStartTimestamp)
@@ -166,7 +166,7 @@ class METNO(RMParser):
             return []
 
         for day in data[tag].keys():
-            log.info("Day: %s - %s" % (day, tag))
+            #log.info("Day: %s - %s" % (day, tag))
             daySum = 0  # For debugging
             partSum = None  # For averaging hourly data to 6 hours interval
             hourlyCounter = 0
@@ -182,7 +182,7 @@ class METNO(RMParser):
 
                 # Ends in next day
                 if eH < sH:
-                    log.info("\t (SKIP) Interval %s %s ends in next day" % (sH, eH))
+                    log.debug("\t (SKIP) Interval %s %s ends in next day" % (sH, eH))
                     continue
 
                 # Does this new interval intersects with an interval already in our data
@@ -191,8 +191,8 @@ class METNO(RMParser):
                     #     log.info("Checking %s-%s against %s-%s" % (sH, eH, si[0], si[1]))
                     if sH < si[1]:
                         if tag == "precipitation":
-                            log.info("%s %s" % (day, tag))
-                            log.info("\t (SKIP i) Interval %s-%s intersects with interval %s-%s" % (sH, eH, si[0], si[1]))
+                            log.debug("%s %s" % (day, tag))
+                            log.debug("\t (SKIP i) Interval %s-%s intersects with interval %s-%s" % (sH, eH, si[0], si[1]))
                         shouldSkip = True
                         break
 
@@ -202,7 +202,7 @@ class METNO(RMParser):
 
                 # We found a "hourly" entry that contains temperature, windSpeed, pressure, dew
                 if duration == 0 and value is not None:
-                    log.info("\t (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
+                    #log.info("\t (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
                     if partSum is None:
                         partSum = value
                     else:
@@ -212,7 +212,7 @@ class METNO(RMParser):
                     if sH > 0 and sH % hoursInterval == 0 or hourlyCounter > hoursInterval:
                         partSum /= hourlyCounter
                         daySum += partSum
-                        log.info("%s Hour average %s to %s (%s values)" % (hoursInterval, tag, partSum, hourlyCounter))
+                        #log.info("%s Hour average %s to %s (%s values)" % (hoursInterval, tag, partSum, hourlyCounter))
                         usedIntervals.append((sH, eH))
                         result.append((intervalTime, partSum)) # Add 6 hours interval value
                         hourlyCounter = 0
@@ -222,21 +222,21 @@ class METNO(RMParser):
                     usedIntervals.append((sH, eH))
                     result.append((intervalTime, value)) # Add 6 hours interval value
                     daySum += value
-                    log.info("\t ADDED (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
+                    log.debug("\t ADDED (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
                 else:
-                    log.info("\t SKIP (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
+                    log.debug("\t SKIP (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
 
             if tag != "precipitation":
                 # Any remaining partials for 6h averaging for a day
                 if partSum is not None and hourlyCounter > 0:
                     partSum /= hourlyCounter
                     daySum += partSum
-                    log.info("(Partial) %s Hour Average hourly %s to %s (%s values)" % (hoursInterval, tag, partSum, hourlyCounter))
+                    #log.info("(Partial) %s Hour Average hourly %s to %s (%s values)" % (hoursInterval, tag, partSum, hourlyCounter))
                     usedIntervals.append((sH, eH))
                     result.append((intervalTime, partSum)) # Add 6 hours interval value
                 daySum = daySum/intervalCounter
 
-            log.info("Day %s Total/AVG (%s/%s) %s %s (%s)\n\n" %  (day, intervalCounter, hourlyCounter, tag, partSum, daySum))
+            #log.info("Day %s Total/AVG (%s/%s) %s %s (%s)\n\n" %  (day, intervalCounter, hourlyCounter, tag, partSum, daySum))
         return result
 
 
