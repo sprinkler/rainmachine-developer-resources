@@ -22,7 +22,7 @@ class METNO(RMParser):
     parserForecast = True
     parserHistorical = False
     parserEnabled = True
-    parserDebug = False
+    parserDebug = True
     parserInterval = 6 * 3600
     params = {}
 
@@ -33,10 +33,11 @@ class METNO(RMParser):
 
     def perform(self):
         s = self.settings
-        URL = "https://api.met.no/weatherapi/locationforecastlts/1.3/"
-        URLParams = [("lat", s.location.latitude),
-                  ("lon", s.location.longitude),
-                  ("msl", int(round(s.location.elevation)))]
+        headers = { "User-Agent": "RainMachine.com v2" }
+        URL = "https://api.met.no/weatherapi/locationforecast/2.0/classic"
+        URLParams = [("lat",  47.19),  #s.location.latitude),
+                  ("lon", 27.33), #s.location.longitude),
+                  ("altitude", 120)] #int(round(s.location.elevation)))]
 
         #-----------------------------------------------------------------------------------------------
         #
@@ -106,8 +107,8 @@ class METNO(RMParser):
                 intervalEndTimestamp = rmTimestampFromUTCDateAsString(to_time, dateFormat)
 
                 if intervalStartTimestamp < todayTimestamp:
-                    #log.info("From: %s To: %s" % (from_time, to_time))
-                    #log.info("*** Local conversion of start timestamp (%s) in the past skipping ..." % from_time)
+                    self.logtrace("From: %s To: %s" % (from_time, to_time))
+                    self.logtrace("*** Local conversion of start timestamp (%s) in the past skipping ..." % from_time)
                     continue
 
                 localStartDate = rmTimestampToDate(intervalStartTimestamp)
@@ -166,7 +167,7 @@ class METNO(RMParser):
             return []
 
         for day in data[tag].keys():
-            #log.info("Day: %s - %s" % (day, tag))
+            self.logtrace("Day: %s - %s" % (day, tag))
             daySum = 0  # For debugging
             partSum = None  # For averaging hourly data to 6 hours interval
             hourlyCounter = 0
@@ -202,7 +203,7 @@ class METNO(RMParser):
 
                 # We found a "hourly" entry that contains temperature, windSpeed, pressure, dew
                 if duration == 0 and value is not None:
-                    #log.info("\t (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
+                    self.logtrace("\t (%s) %s-%s: %s %s" % (duration, sH, eH, tag, value))
                     if partSum is None:
                         partSum = value
                     else:
@@ -212,7 +213,7 @@ class METNO(RMParser):
                     if sH > 0 and sH % hoursInterval == 0 or hourlyCounter > hoursInterval:
                         partSum /= hourlyCounter
                         daySum += partSum
-                        #log.info("%s Hour average %s to %s (%s values)" % (hoursInterval, tag, partSum, hourlyCounter))
+                        self.logtrace("%s Hour average %s to %s (%s values)" % (hoursInterval, tag, partSum, hourlyCounter))
                         usedIntervals.append((sH, eH))
                         result.append((intervalTime, partSum)) # Add 6 hours interval value
                         hourlyCounter = 0
@@ -231,12 +232,12 @@ class METNO(RMParser):
                 if partSum is not None and hourlyCounter > 0:
                     partSum /= hourlyCounter
                     daySum += partSum
-                    #log.info("(Partial) %s Hour Average hourly %s to %s (%s values)" % (hoursInterval, tag, partSum, hourlyCounter))
+                    self.logtrace("(Partial) %s Hour Average hourly %s to %s (%s values)" % (hoursInterval, tag, partSum, hourlyCounter))
                     usedIntervals.append((sH, eH))
                     result.append((intervalTime, partSum)) # Add 6 hours interval value
                 daySum = daySum/intervalCounter
 
-            #log.info("Day %s Total/AVG (%s/%s) %s %s (%s)\n\n" %  (day, intervalCounter, hourlyCounter, tag, partSum, daySum))
+            self.logtrace("Day %s Total/AVG (%s/%s) %s %s (%s)\n\n" %  (day, intervalCounter, hourlyCounter, tag, partSum, daySum))
         return result
 
 
@@ -296,6 +297,9 @@ class METNO(RMParser):
         else:
             return  RMParser.conditionType.Unknown
 
+    def logtrace(self, msg, *args, **kwargs):
+        if self.parserDebug:
+            log.info(msg, *args, **kwargs)
 
 if __name__ == "__main__":
     parser = METNO()
