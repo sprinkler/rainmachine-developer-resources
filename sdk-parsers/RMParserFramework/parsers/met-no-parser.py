@@ -22,7 +22,7 @@ class METNO(RMParser):
     parserForecast = True
     parserHistorical = False
     parserEnabled = True
-    parserDebug = True
+    parserDebug = False
     parserInterval = 6 * 3600
     params = {}
 
@@ -35,9 +35,9 @@ class METNO(RMParser):
         s = self.settings
         headers = { "User-Agent": "RainMachine.com v2" }
         URL = "https://api.met.no/weatherapi/locationforecast/2.0/classic"
-        URLParams = [("lat",  47.19),  #s.location.latitude),
-                  ("lon", 27.33), #s.location.longitude),
-                  ("altitude", 120)] #int(round(s.location.elevation)))]
+        URLParams = [("lat", s.location.latitude),
+                  ("lon", s.location.longitude),
+                  ("altitude", int(round(s.location.elevation)))]
 
         #-----------------------------------------------------------------------------------------------
         #
