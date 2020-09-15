@@ -1,6 +1,6 @@
 from RMParserFramework.rmParser import RMParser  # Mandatory include for parser definition
 from RMUtilsFramework.rmLogging import log       # Optional include for logging
-from RMUtilsFramework.rmTimeUtils import rmNowDateTime, rmGetStartOfDay, rmCurrentDayTimestamp, rmDeltaDayFromTimestamp, rmCurrentTimestamp
+from RMUtilsFramework.rmTimeUtils import * #rmNowDateTime, rmGetStartOfDay, rmCurrentDayTimestamp, rmDeltaDayFromTimestamp, rmCurrentTimestamp
 
 import json
 from datetime import datetime
@@ -83,6 +83,7 @@ class NoaaObsParser(RMParser):
     params = {
         "_stationURL" : "https://w1.weather.gov/data/obhistory/KBDU.html",
         "stationID" : 'KBDU',
+        "dailyAccum": True,
         "_lastRain" : '',
         "_lastRainTS": '',
         "_lastTS": ''
@@ -107,36 +108,55 @@ class NoaaObsParser(RMParser):
         if self.parserDebug:
             log.debug(self.result)
 
-    def __parse_time(self, cur, date, time):
+    def __parse_time(self, date, time):
         try:
             log_day = int(date)
             log_time = [int(x) for x in time.split(':')]
         except:
             return None
 
-        # The date format logged is very annoying... it's just the day of the month.
-        # Since the log is only 1 week long, we can't have a date bigger than today unless it's from the previous month.
-        month = cur.month
-        day = cur.day
-        year = cur.year
+        if self.params['dailyAccum']:
+            tsToday = rmCurrentDayTimestamp()
+            tsYesterDay = rmDeltaDayFromTimestamp(tsToday, -1)
+            today = rmTimestampToDate(tsToday)
+            yester = rmTimestampToDate(tsYesterDay)
 
-        #Don't short circuit for just today since NOAA only updates HTML every few hours and we may miss rain
-        # in the late evening
-        #if day != log_day:
-        #    return None
+            #Only update rain for today and yesterday as a daily average
+            if(today.day == log_day):
+                log_date = today
+            elif(yester.day == log_day):
+                log_date = yester
+            else:
+                return None
 
-        if day - log_day < 0:
-            month -= 1
-            if month == 0:
-                month = 12
-                year -= 1
+        else:
+            curTime = rmNowDateTime()
 
-        #Construct a new date with the month/day/time information
-        # Rainmachine addValue rounds to the hour, so drop the minutes and we'll accumulate outside
-        log_date = datetime(year, month, log_day, log_time[0])
+            # The date format logged is very annoying... it's just the day of the month.
+            # Since the log is only 1 week long, we can't have a date bigger than today unless it's from the previous month.
+            month = curTime.month
+            day = curTime.day
+            year = curTime.year
+
+            #Don't short circuit for just today since NOAA only updates HTML every few hours and we may miss rain
+            # in the late evening
+            #if day != log_day:
+            #    return None
+
+            if day - log_day < 0:
+                month -= 1
+                if month == 0:
+                    month = 12
+                    year -= 1
+
+            #Construct a new date with the month/day/time information
+            # Rainmachine addValue rounds to the hour, so drop the minutes and we'll accumulate outside
+            log_date = datetime(year, month, log_day, log_time[0])
+
+
         #convert to our unix timestamp for logging
-        #  Do we need to account for UTC?
-        timestamp = int((log_date - datetime(1970, 1, 1)).total_seconds())
+        #  This is the same method RM uses in rmGetStartOfDay() which matches all the timestamp styles
+        timestamp = int(log_date.strftime("%s"))
 
         return timestamp
 
@@ -182,15 +202,13 @@ class NoaaObsParser(RMParser):
             colStr = re.split('[^a-zA-Z]',col)
             fieldIdx[colStr[0]] = cIdx
 
-        myTime = rmNowDateTime()
-
         # Walk our table and build a list of tuples to insert
         #  Skip the first 3 and last 3 rows since that's the headers
         headerLen = len(weatherObs[0])
-        rainHourly = {}
+        rainData = {}
         for row in weatherObs[3:-3]:
             if len(row) == headerLen:
-                time = self.__parse_time(myTime,row[fieldIdx['Date']],row[fieldIdx['Time']])
+                time = self.__parse_time(row[fieldIdx['Date']],row[fieldIdx['Time']])
 
                 if time:
                     # Need to see how the precipitation is logged for 1/3/6 hr, when rows are ~28min apart
@@ -199,19 +217,19 @@ class NoaaObsParser(RMParser):
                     rain = self.__parse_precip(row[fieldIdx['Precipitation'] - 2], row[fieldIdx['Precipitation'] - 1],
                                                row[fieldIdx['Precipitation']])
 
-                    if time in rainHourly:
-                        rainHourly[time] += rain
+                    if time in rainData:
+                        rainData[time] += rain
                     else:
-                        rainHourly[time] = rain
+                        rainData[time] = rain
 
-        for k, v in sorted(rainHourly.items()):
+        for k, v in sorted(rainData.items()):
             self.addValue(RMParser.dataType.RAIN, k, v)
 
             if v > 0:
                 self.params['_lastRain'] = v
                 self.params['_lastRainTS'] = k
             self.params['_lastTS'] = k
-            #log.info("times:%s (%d) Rain:%f"%(datetime.fromtimestamp(k), k, v))
+            #log.info("times:%s (%d) Rain:%f"%(rmTimestampToDateAsString(k), k, v))
 
         # Reset lastKnownError from a previous function call
         self.lastKnownError = ""
