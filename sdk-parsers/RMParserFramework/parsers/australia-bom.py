@@ -886,6 +886,8 @@ class AustraliaBOM(RMParser):
                 code = 'T'
             elif wmo['state'] == "NT":
                 code = 'D'
+            elif wmo['state'] == "SA":
+                code = 'S'
             return "http://www.bom.gov.au/fwo/ID" + code + "60801/ID" + code + "60801." + str(wmo['id']) + ".json"
 
         return None
