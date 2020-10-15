@@ -64,7 +64,7 @@ class RMAPIClientZones(RMAPIClientCalls):
             data = properties
 
             if advanced is not None:
-                data["waterSense"] = advanced
+                data["advanced"] = advanced
 
             return self.POST(url, data)
 
