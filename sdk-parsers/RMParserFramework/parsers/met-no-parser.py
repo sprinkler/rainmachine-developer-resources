@@ -9,6 +9,7 @@ from RMUtilsFramework.rmTimeUtils import *
 from RMUtilsFramework.rmTypeUtils import *
 
 import datetime, time, os
+import random
 from xml.etree import ElementTree as e
 from datetime import timedelta
 from collections import OrderedDict
@@ -33,17 +34,21 @@ class METNO(RMParser):
 
     def perform(self):
         s = self.settings
-        headers = { "User-Agent": "RainMachine.com v2" }
+        headers = [{ "User-Agent": "RainMachine.com v2" },
+                   { "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36"}]
+
         URL = "https://api.met.no/weatherapi/locationforecast/2.0/classic"
+
         URLParams = [("lat", s.location.latitude),
-                  ("lon", s.location.longitude),
-                  ("altitude", int(round(s.location.elevation)))]
+                     ("lon",  s.location.longitude),
+                     ("altitude", int(round(s.location.elevation)))]
+
 
         #-----------------------------------------------------------------------------------------------
         #
         # Get hourly data.
         #
-        d = self.openURL(URL, URLParams)
+        d = self.openURL(URL, URLParams, headers=headers[random.randint(0, 1)])
         if d is None:
             return
 
