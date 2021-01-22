@@ -1,0 +1,104 @@
+{
+    "files": {
+        "sdk-parsers/RMParserFramework/parsers/aeris-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/ambientweather-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/australia-bom.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/cimis-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/dwd-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/example-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/fawn-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/fawn-report-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/fixed-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/forecast-io-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/mesonet-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/meteobridge-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/met-no-old-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/met-no-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/netatmo-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/noaa-old-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/noaa-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/owm-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/pws-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/simulator-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/weatherlinkip-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/weatherlink-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/wf-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/wifilogger-parser.py": {
+            "version": "1.0",
+            "author": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/wunderground-parser.py": {
+            "version": "1.0",
+            "author": ""
+        }
+    }
+}

@@ -1,0 +1,32 @@
+on: [push]
+
+jobs:
+  versioning_job:
+    runs-on: ubuntu-latest
+    name: RainMachine Parsers versioning
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Checking for files to increase version
+        uses: nicupavel/action-files-version-increment@v3
+        id: versioning_job
+        with:
+          metadata-file: 'version-metadata.json'
+      - name: Get the output time
+        run: echo "The time was ${{ steps.versioning_job.outputs.time }}"
+      - name: Get list of modified files
+        run: echo "Modified files ${{ steps.versioning_job.outputs.modified_files }}"
+      - id: commit_if_modified
+        name: Commit metadata file
+        if: steps.versioning_job.outputs.modified_files
+        run: |
+          git config --local user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config --local user.name "$GITHUB_ACTOR"
+          git commit -am "Versioning for ${{ steps.versioning_job.outputs.modified_files }}"
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.head_ref }}
