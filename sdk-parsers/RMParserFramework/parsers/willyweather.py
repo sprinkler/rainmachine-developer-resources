@@ -49,8 +49,8 @@ from RMDataFramework.rmUserSettings import globalSettings
 import json
 
 class WillyWeather(RMParser):
-    parserName = "WillyWeather Australia Parser"
-    parserDescription = "Australian weather service from https://www.willyweather.com.au"
+    parserName = "Australia WillyWeather"
+    parserDescription = "Retrieve data from WillyWeather Australian weather service"
     parserForecast = True
     parserHistorical = True
     parserID = "willyweather"

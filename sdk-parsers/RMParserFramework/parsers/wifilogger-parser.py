@@ -12,8 +12,8 @@ import json
 
 
 class WifiLogger(RMParser):
-    parserName = "WifiLogger Parser"
-    parserDescription = "WifiLogger Parser"
+    parserName = "Davis WifiLogger"
+    parserDescription = "Retrieve data from Davis Vantage Pro, Vue, Envoy weather stations attached to WiFiLogger"
     parserInterval = 6 * 3600  # delay between runs in seconds
     parserForecast = False
     parserHistorical = True

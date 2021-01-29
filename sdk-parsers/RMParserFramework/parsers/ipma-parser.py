@@ -26,8 +26,8 @@ MAX_STATION_DISTANCE = 10  # Max Distance in Km
 
 
 class IPMA(RMParser):
-    parserName = "IPMA Parser"
-    parserDescription = "Instituto Portugues do Mar e da Atmosfera forecasts from " + IPMA_API_URL
+    parserName = "Portuguese Weather Bureau"
+    parserDescription = "Local forecasts in Portugal from the Instituto Português do Mar e da Atmosfera (IPMA)"
     parserForecast = True
     parserHistorical = False
     parserInterval = 3600

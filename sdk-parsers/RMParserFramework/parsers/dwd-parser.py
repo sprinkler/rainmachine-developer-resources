@@ -102,8 +102,8 @@ class BufferedRandomReader:
 
 # Parser class
 class DWDParser(RMParser):
-    parserName = "DWD Parser"
-    parserDescription = "Parser for the german \"Deutscher Wetterdienst\". To get station ID please see: https://www.dwd.de/DE/leistungen/opendata/help/stationen/mosmix_stationskatalog.cfg?view=nasPublication&nn=16102"
+    parserName = "Deutscher Wetterdienst"
+    parserDescription = "German Weather Service (DWD)"
     parserForecast = True
     parserHistorical = True
     parserInterval = 6 * 3600

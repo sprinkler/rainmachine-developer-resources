@@ -5,9 +5,7 @@ import json    # Your parser needed libraries
 
 class Mesonet(RMParser):
     parserName = "Mesonet"         # Your parser name
-    parserDescription = "The Oklahoma Mesonet is a world-class network of environmental monitoring stations. " \
-                        "The network was designed and implemented by scientists at the University of Oklahoma (OU) " \
-                        "and at Oklahoma State University (OSU)." # A description for this parser
+    parserDescription = "The Oklahoma Mesonet is a world-class network of environmental monitoring stations." # A description for this parser
 
     parserEnabled = True
     parserInterval = 3600                    # Your parser running interval in seconds

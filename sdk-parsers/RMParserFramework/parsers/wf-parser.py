@@ -49,8 +49,8 @@ from urllib import urlencode
 import time as mod_time
 
 class WeatherFlow(RMParser):
-    parserName = "WeatherFlow Parser"
-    parserDescription = "Parse data from a WeatherFlow Smart Weather Station (ver 1.2.0)"
+    parserName = "WeatherFlow Personal Weather Station"
+    parserDescription = "Retrieves data from a WeatherFlow Smart Weather Station on local network"
     parserForecast = False # True if parser provides future forecast data
     parserHistorical = True # True if parser also provides historical data (only actual observed data)
     # parserInterval defines how often the mixer will call this to retrieve

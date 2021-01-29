@@ -19,7 +19,7 @@ from RMUtilsFramework.rmUtils import distanceBetweenGeographicCoordinatesAsKm
 
 
 class PWSWeather(RMParser):
-    parserName = "Aeris PWS Weather Parser"
+    parserName = "Aeris Personal Weather Station"
     parserDescription = "Personal weather station contributor access from PWS Weather(Aeris)"
     parserForecast = True
     parserHistorical = True

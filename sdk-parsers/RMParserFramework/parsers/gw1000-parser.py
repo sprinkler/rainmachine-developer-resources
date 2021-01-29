@@ -54,8 +54,8 @@ from RMUtilsFramework.rmTimeUtils import rmGetStartOfDay
 
 
 class GW1000(RMParser):
-    parserName = 'GW1000 Parser'
-    parserDescription = 'GW1000 WiFi Weather Station Gateway data feed'
+    parserName = 'Ecowitt GW1000 Weather Gateway'
+    parserDescription = 'Wi-Fi Weather Station Gateway, Ecowitt GW1000 direct data connection'
     parserForecast = False
     parserHistorical = True
     parserEnabled = False

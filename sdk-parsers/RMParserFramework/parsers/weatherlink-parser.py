@@ -14,8 +14,8 @@ import rfc822
 
 
 class Weatherlink(RMParser):
-    parserName = "Davis Weatherlink.Com Parser"
-    parserDescription = "Davis Weatherlink.Com Service Parser "
+    parserName = "Davis WeatherLink"
+    parserDescription = "Davis Weatherlink.Com Weather Service"
     parserInterval = 6 * 3600  # delay between runs in seconds
     parserForecast = False
     parserHistorical = True
