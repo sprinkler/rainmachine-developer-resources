@@ -34,9 +34,9 @@ class IPMA(RMParser):
     parserEnabled = False
     parserDebug = False
 
-    STATION = '_Near Station:'
-    STATION_ID = '_Station Id:'
-    STATION_DISTANCE = "_Station Distance (Km):"
+    STATION = '_NearStation'
+    STATION_ID = '_StationId'
+    STATION_DISTANCE = '_StationDistance(Km)'
     params = {STATION: 'auto discover', STATION_ID: None, STATION_DISTANCE: MAX_STATION_DISTANCE}
 
     def isEnabledForLocation(self, timezone, lat, lon):
