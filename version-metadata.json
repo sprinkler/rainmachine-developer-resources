@@ -36,7 +36,7 @@
       "instructions": "https://github.com/pjpeartree/rainmachine-gw1000"
     },
     "sdk-parsers/RMParserFramework/parsers/ipma-parser.py": {
-      "version": "1.02",
+      "version": "1.03",
       "author": "Pedro J. Pereira <pjpeartree@gmail.com>",
       "name": "Portuguese Weather Bureau",
       "description": "Local forecasts in Portugal from the Instituto Português do Mar e da Atmosfera (IPMA)",
