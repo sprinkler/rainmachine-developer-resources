@@ -18,7 +18,7 @@ class Mesonet(RMParser):
     # The function that will be executed must have this name
     def perform(self):
         # downloading data from a URL convenience function since other python libraries can be used
-        URL = "http://lab.zanek.net/mesonet/api/currentobservations"
+        URL = "https://lab.zanek.net/api/currentobservations_final"
         stationID = self.params['StationId']
         data = self.openURL(URL)
 
