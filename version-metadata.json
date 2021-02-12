@@ -1,95 +1,95 @@
 {
-  "files": {
-    "sdk-parsers/RMParserFramework/parsers/aeris-parser.py": {
-      "version": "1.01",
-      "author": "Gordon Larsen <gordon@the-larsens.ca>",
-      "name": "Aeris Personal Weather Station",
-      "description": "Personal weather station contributor access from PWS Weather(Aeris)",
-      "instructions": ""
-    },
-    "sdk-parsers/RMParserFramework/parsers/ambientweather-parser.py": {
-      "version": "1.01",
-      "author": "Seth Mattinen <seth@mattinen.org>",
-      "name": "Ambient Weather Network",
-      "description": "Live personal weather station data from www.ambientweather.net",
-      "instructions": ""
-    },
-    "sdk-parsers/RMParserFramework/parsers/australia-bom.py": {
-      "version": "1.01",
-      "author": "Community",
-      "name": "Australia Weather Bureau",
-      "description": "Commonwealth of Australia Bureau of Meteorology",
-      "instructions": ""
-    },
-    "sdk-parsers/RMParserFramework/parsers/dwd-parser.py": {
-      "version": "1.01",
-      "author": "Sebastian Kuhn",
-      "name": "Deutscher Wetterdienst",
-      "description": "German Weather Service (DWD)",
-      "instructions": "To get station ID please see: https://www.dwd.de/DE/leistungen/opendata/help/stationen/mosmix_stationskatalog.cfg?view=nasPublication&nn=16102"
-    },
-    "sdk-parsers/RMParserFramework/parsers/gw1000-parser.py": {
-      "version": "1.02",
-      "author": "Pedro J. Pereira <pjpeartree@gmail.com>",
-      "name": "Ecowitt GW1000 Weather Gateway",
-      "description": "Wi-Fi Weather Station Gateway, Ecowitt GW1000 direct data connection",
-      "instructions": "https://github.com/pjpeartree/rainmachine-gw1000"
-    },
-    "sdk-parsers/RMParserFramework/parsers/ipma-parser.py": {
-      "version": "1.03",
-      "author": "Pedro J. Pereira <pjpeartree@gmail.com>",
-      "name": "Portuguese Weather Bureau",
-      "description": "Local forecasts in Portugal from the Instituto Português do Mar e da Atmosfera (IPMA)",
-      "instructions": "https://github.com/pjpeartree/rainmachine-ipma"
-    },
-    "sdk-parsers/RMParserFramework/parsers/mesonet-parser.py": {
-      "version": "1.01",
-      "author": "Community",
-      "name": "Mesonet",
-      "description": "The Oklahoma Mesonet is a world-class network of environmental monitoring stations.",
-      "instructions": ""
-    },
-    "sdk-parsers/RMParserFramework/parsers/meteobridge-parser.py": {
-      "version": "1.01",
-      "author": "Gordon Larsen <gordon@the-larsens.ca>",
-      "name": "Meteobridge Personal Weather Station",
-      "description": "Personal Weather Station data upload from Meteobridge",
-      "instructions": ""
-    },
-    "sdk-parsers/RMParserFramework/parsers/weatherlinkip-parser.py": {
-      "version": "1.01",
-      "author": "Community",
-      "name": "Davis Weather Link IP",
-      "description": "Davis Weather Station with WeatherLink IP (local network access)",
-      "instructions": ""
-    },
-    "sdk-parsers/RMParserFramework/parsers/weatherlink-parser.py": {
-      "version": "1.01",
-      "author": "George Bothwell <gcbothwell@gmail.com>",
-      "name": "Davis WeatherLink",
-      "description": "Davis Weatherlink.Com Weather Service",
-      "instructions": ""
-    },
-    "sdk-parsers/RMParserFramework/parsers/wf-parser.py": {
-      "version": "1.21",
-      "author": "Bob Paauwe <bpaauwe@bobsplace.com>",
-      "name": "WeatherFlow Personal Weather Station",
-      "description": "Retrieves data from a WeatherFlow Smart Weather Station on local network",
-      "instructions": ""
-    },
-    "sdk-parsers/RMParserFramework/parsers/wifilogger-parser.py": {
-      "version": "1.01",
-      "author": "George Bothwell <gcbothwell@gmail.com>",
-      "name": "Davis WifiLogger",
-      "description": "Retrieve data from Davis Vantage Pro, Vue, Envoy weather stations attached to WiFiLogger",
-      "instructions": ""
-    },
-    "sdk-parsers/RMParserFramework/parsers/willyweather.py": {
-      "version": "1.02",
-      "author": "Richard Mann <mann_rj@hotmail.com>",
-      "name": "Australia WillyWeather",
-      "description": "Retrieve data from WillyWeather Australian weather service",
-      "instructions": "https://github.com/safepay/rainmachine-willyweather"
+    "files": {
+        "sdk-parsers/RMParserFramework/parsers/aeris-parser.py": {
+            "version": "1.01",
+            "author": "Gordon Larsen <gordon@the-larsens.ca>",
+            "name": "Aeris Personal Weather Station",
+            "description": "Personal weather station contributor access from PWS Weather(Aeris)",
+            "instructions": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/ambientweather-parser.py": {
+            "version": "1.01",
+            "author": "Seth Mattinen <seth@mattinen.org>",
+            "name": "Ambient Weather Network",
+            "description": "Live personal weather station data from www.ambientweather.net",
+            "instructions": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/australia-bom.py": {
+            "version": "1.01",
+            "author": "Community",
+            "name": "Australia Weather Bureau",
+            "description": "Commonwealth of Australia Bureau of Meteorology",
+            "instructions": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/dwd-parser.py": {
+            "version": "1.01",
+            "author": "Sebastian Kuhn",
+            "name": "Deutscher Wetterdienst",
+            "description": "German Weather Service (DWD)",
+            "instructions": "To get station ID please see: https://www.dwd.de/DE/leistungen/opendata/help/stationen/mosmix_stationskatalog.cfg?view=nasPublication&nn=16102"
+        },
+        "sdk-parsers/RMParserFramework/parsers/gw1000-parser.py": {
+            "version": "1.02",
+            "author": "Pedro J. Pereira <pjpeartree@gmail.com>",
+            "name": "Ecowitt GW1000 Weather Gateway",
+            "description": "Wi-Fi Weather Station Gateway, Ecowitt GW1000 direct data connection",
+            "instructions": "https://github.com/pjpeartree/rainmachine-gw1000"
+        },
+        "sdk-parsers/RMParserFramework/parsers/ipma-parser.py": {
+            "version": "1.02",
+            "author": "Pedro J. Pereira <pjpeartree@gmail.com>",
+            "name": "Portuguese Weather Bureau",
+            "description": "Local forecasts in Portugal from the Instituto Português do Mar e da Atmosfera (IPMA)",
+            "instructions": "https://github.com/pjpeartree/rainmachine-ipma"
+        },
+        "sdk-parsers/RMParserFramework/parsers/mesonet-parser.py": {
+            "version": "1.01",
+            "author": "Community",
+            "name": "Mesonet",
+            "description": "The Oklahoma Mesonet is a world-class network of environmental monitoring stations.",
+            "instructions": "Select your station identifier from the map here: http://www.mesonet.org/index.php/site/sites/station_site_id_map"
+        },
+        "sdk-parsers/RMParserFramework/parsers/meteobridge-parser.py": {
+            "version": "1.01",
+            "author": "Gordon Larsen <gordon@the-larsens.ca>",
+            "name": "Meteobridge Personal Weather Station",
+            "description": "Personal Weather Station data upload from Meteobridge",
+            "instructions": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/weatherlinkip-parser.py": {
+            "version": "1.01",
+            "author": "Community",
+            "name": "Davis Weather Link IP",
+            "description": "Davis Weather Station with WeatherLink IP (local network access)",
+            "instructions": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/weatherlink-parser.py": {
+            "version": "1.01",
+            "author": "George Bothwell <gcbothwell@gmail.com>",
+            "name": "Davis WeatherLink",
+            "description": "Davis Weatherlink.Com Weather Service",
+            "instructions": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/wf-parser.py": {
+            "version": "1.21",
+            "author": "Bob Paauwe <bpaauwe@bobsplace.com>",
+            "name": "WeatherFlow Personal Weather Station",
+            "description": "Retrieves data from a WeatherFlow Smart Weather Station on local network",
+            "instructions": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/wifilogger-parser.py": {
+            "version": "1.01",
+            "author": "George Bothwell <gcbothwell@gmail.com>",
+            "name": "Davis WifiLogger",
+            "description": "Retrieve data from Davis Vantage Pro, Vue, Envoy weather stations attached to WiFiLogger",
+            "instructions": ""
+        },
+        "sdk-parsers/RMParserFramework/parsers/willyweather.py": {
+            "version": "1.02",
+            "author": "Richard Mann <mann_rj@hotmail.com>",
+            "name": "Australia WillyWeather",
+            "description": "Retrieve data from WillyWeather Australian weather service",
+            "instructions": "https://github.com/safepay/rainmachine-willyweather"
+        }
     }
-  }
 }
