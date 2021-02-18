@@ -22,7 +22,7 @@
       "instructions": ""
     },
     "sdk-parsers/RMParserFramework/parsers/dwd-parser.py": {
-      "version": "1.01",
+      "version": "1.02",
       "author": "Sebastian Kuhn",
       "name": "Deutscher Wetterdienst",
       "description": "German Weather Service (DWD)",
