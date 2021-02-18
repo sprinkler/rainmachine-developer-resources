@@ -109,7 +109,6 @@ class DWDParser(RMParser):
     parserInterval = 6 * 3600
     parserDebug = False
     params = {"station": None}
-    defaultParams = {"station": "10637"}
 
     def perform(self):
         station = self.params.get("station", None)
