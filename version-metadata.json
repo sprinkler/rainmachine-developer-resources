@@ -43,7 +43,7 @@
       "instructions": "https://github.com/pjpeartree/rainmachine-ipma"
     },
     "sdk-parsers/RMParserFramework/parsers/mesonet-parser.py": {
-      "version": "1.02",
+      "version": "1.03",
       "author": "Community",
       "name": "Mesonet",
       "description": "The Oklahoma Mesonet is a world-class network of environmental monitoring stations.",
