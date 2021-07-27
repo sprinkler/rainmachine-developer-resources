@@ -109,8 +109,12 @@ class Netatmo(RMParser):
     def buildAvailableModules(self):
         self.params["_availableModules"] = []
         for device in self.jsonData["body"]["devices"]:
+            if "modules" not in device:
+                log.debug("Device doesn't have modules")
+                continue
+
             modules = device["modules"]
-            deviceName = device["station_name"]
+            deviceName = device.get("station_name", "Unnamed Station")
             deviceLoc = str(round(device["place"]["location"][0], 2)) + "," + str(round(device["place"]["location"][1], 2))
             for module in modules:
                 moduleName = 'unnamed'
@@ -130,7 +134,10 @@ class Netatmo(RMParser):
                 self.params["_availableModules"].append([moduleName, moduleID, deviceName, deviceLoc])
 
     def getDeviceData(self, device, specifiedModules):
-        name = device["station_name"] # put as output parameter?
+        if "modules" not in device:
+            log.error("Device has no modules to get outdoor data")
+            return
+
         [llat, llon] = device["place"]["location"] # use for max distance
         deviceID = device["_id"]
         modules = device["modules"]
@@ -297,6 +304,7 @@ class Netatmo(RMParser):
         req = urllib2.Request(url=url, data=params, headers=headers)
 
         try:
+            log.info("Getting data from %s" % url)
             response = urllib2.urlopen(req)
             log.debug("%s?%s" % (response.geturl(), params))
             return json.loads(response.read())
