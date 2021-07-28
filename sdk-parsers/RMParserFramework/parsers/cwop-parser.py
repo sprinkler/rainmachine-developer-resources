@@ -46,7 +46,7 @@ class CWOPKeys:
 
 
 class CWOP(RMParser):
-    parserName = "Weather Stations Parser"
+    parserName = "Weather Stations"
     parserDescription = "Observed data from World-Wide Weather Stations Citizen Weather Observer Program"
     parserForecast = False
     parserHistorical = True
