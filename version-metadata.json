@@ -8,7 +8,7 @@
       "instructions": ""
     },
     "sdk-parsers/RMParserFramework/parsers/aeris-parser.py": {
-      "version": "1.01",
+      "version": "1.02",
       "author": "Gordon Larsen <gordon@the-larsens.ca>",
       "name": "Aeris Personal Weather Station",
       "description": "Personal weather station contributor access from PWS Weather(Aeris)",
@@ -36,7 +36,7 @@
       "instructions": "To get station ID please see: https://www.dwd.de/DE/leistungen/opendata/help/stationen/mosmix_stationskatalog.cfg?view=nasPublication&nn=16102"
     },
     "sdk-parsers/RMParserFramework/parsers/gw1000-parser.py": {
-      "version": "1.02",
+      "version": "1.03",
       "author": "Pedro J. Pereira <pjpeartree@gmail.com>",
       "name": "Ecowitt GW1000 Weather Gateway",
       "description": "Wi-Fi Weather Station Gateway, Ecowitt GW1000 direct data connection",
@@ -78,7 +78,7 @@
       "instructions": ""
     },
     "sdk-parsers/RMParserFramework/parsers/wf-parser.py": {
-      "version": "1.21",
+      "version": "1.22",
       "author": "Bob Paauwe <bpaauwe@bobsplace.com>",
       "name": "WeatherFlow Personal Weather Station",
       "description": "Retrieves data from a WeatherFlow Smart Weather Station on local network",
