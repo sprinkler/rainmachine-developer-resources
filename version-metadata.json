@@ -8,14 +8,14 @@
       "instructions": ""
     },
     "sdk-parsers/RMParserFramework/parsers/accuweather-parser.py": {
-      "version": "1.00",
+      "version": "1.01",
       "author": "gitzone83 <mxhajduczenia@gmail.com>",
       "name": "AccuWeather Network Weather Information Parser",
       "description": "Weather data from www.accuweather.com",
       "instructions": ""
     },
     "sdk-parsers/RMParserFramework/parsers/aeris-parser.py": {
-      "version": "1.02",
+      "version": "1.03",
       "author": "Gordon Larsen <gordon@the-larsens.ca>",
       "name": "Aeris Personal Weather Station",
       "description": "Personal weather station contributor access from PWS Weather(Aeris)",
@@ -71,7 +71,7 @@
       "instructions": ""
     },
     "sdk-parsers/RMParserFramework/parsers/purpleair-parser.py": {
-      "version": "1.00",
+      "version": "1.01",
       "author": "Mike Edmunds <medmunds@gmail.com>",
       "name": "PurpleAir Parser",
       "description": "Obtain temperature from PurpleAir sensor",
