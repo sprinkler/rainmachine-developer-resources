@@ -1,7 +1,7 @@
 {
   "files": {
     "sdk-parsers/RMParserFramework/parsers/cwop-parser.py": {
-      "version": "2.01",
+      "version": "2.02",
       "author": "RainMachine <apps@rainmachine.com>",
       "name": "Weather Stations",
       "description": "Observed data from World-Wide Weather Stations Citizen Weather Observer Program",
