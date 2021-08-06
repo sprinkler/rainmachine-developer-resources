@@ -1,7 +1,6 @@
 # Copyright (c) 2015 RainMachine, Green Electronics LLC
 # All rights reserved.
 # Authors: Gordon Larsen <gordon@the-larsens.ca>
-#          Nicu Pavel <npavel@mini-box.com>
 
 
 import calendar
@@ -114,7 +113,6 @@ class PWSWeather(RMParser):
         return
 
     def getNearbyStations(self, jsonData):
-
         airportStations = {}
         pwsStations = {}
         llat = self.settings.location.latitude
@@ -124,7 +122,6 @@ class PWSWeather(RMParser):
             for key in jsonData['response']:
                 if len(key['id']) == 4:
                     airportStations.update({str(key['id']): key['loc']})
-
         except:
             log.warning("No airport stations found!")
             self.lastKnownError = "Warning: No airport stations found!"
@@ -133,8 +130,6 @@ class PWSWeather(RMParser):
             for key in jsonData['response']:
                 if ("MID" in key['id']) or ("PWS" in key['id']):
                     pwsStations.update({str(key['id']): key['loc']})
-
-
         except:
             log.warning("No pws stations found!")
             self.lastKnownError = "Warning: No pws stations found!"
@@ -145,7 +140,6 @@ class PWSWeather(RMParser):
                 # print key
                 # print pwsStations.get(key)['lat']
                 distance = None
-
                 lat = pwsStations.get(key)['lat']
                 lon = pwsStations.get(key)['long']
                 log.debug("lat: {}, lon: {}, llat: {}, llon: {}".format(lat, lon, llat, llon))
@@ -167,10 +161,8 @@ class PWSWeather(RMParser):
         log.debug(self.params["_nearbyStationsIDList"])
 
         if airportStations:
-
             for key in airportStations:
                 distance = None
-
                 lat = airportStations.get(key)['lat']
                 lon = airportStations.get(key)['long']
                 log.debug("lat: {}, lon: {}, llat: {}, llon: {}".format(lat, lon, llat, llon))
@@ -379,17 +371,13 @@ class PWSWeather(RMParser):
 
         try:
             d = self.openURL(apiURL)
-            # request = urllib2.urlopen(apiURL)
             jsonContent = d.read()
             if jsonContent is None:
                 log.debug("Failed to get Aeris JSON contents")
                 self.lastKnownError = "Error: Bad response"
                 return
 
-            log.debug("jsonContent: {}".format(jsonContent))
-
             jsonResponse = (json.loads(jsonContent))
-            # print (jsonResponse)
             if (jsonResponse['success']):
                 return jsonResponse
 

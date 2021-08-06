@@ -7,6 +7,13 @@
       "description": "Observed data from World-Wide Weather Stations Citizen Weather Observer Program",
       "instructions": ""
     },
+    "sdk-parsers/RMParserFramework/parsers/accuweather-parser.py": {
+      "version": "1.00",
+      "author": "gitzone83 <mxhajduczenia@gmail.com>",
+      "name": "AccuWeather Network Weather Information Parser",
+      "description": "Weather data from www.accuweather.com",
+      "instructions": ""
+    },
     "sdk-parsers/RMParserFramework/parsers/aeris-parser.py": {
       "version": "1.02",
       "author": "Gordon Larsen <gordon@the-larsens.ca>",
@@ -26,7 +33,7 @@
       "author": "Community",
       "name": "Australia Weather Bureau",
       "description": "Commonwealth of Australia Bureau of Meteorology",
-      "instructions": ""
+      "instructions": "To install this weather parser make sure you connect to RainMachine via local network, it can't be installed over remote-access."
     },
     "sdk-parsers/RMParserFramework/parsers/dwd-parser.py": {
       "version": "1.02",
@@ -62,6 +69,13 @@
       "name": "Meteobridge Personal Weather Station",
       "description": "Personal Weather Station data upload from Meteobridge",
       "instructions": ""
+    },
+    "sdk-parsers/RMParserFramework/parsers/purpleair-parser.py": {
+      "version": "1.00",
+      "author": "Mike Edmunds <medmunds@gmail.com>",
+      "name": "PurpleAir Parser",
+      "description": "Obtain temperature from PurpleAir sensor",
+      "instructions": "https://github.com/medmunds/rainmachine-weather-purpleair#readme"
     },
     "sdk-parsers/RMParserFramework/parsers/weatherlinkip-parser.py": {
       "version": "1.01",
