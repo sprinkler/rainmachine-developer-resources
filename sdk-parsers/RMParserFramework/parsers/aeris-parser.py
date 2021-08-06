@@ -2,8 +2,6 @@
 # All rights reserved.
 # Authors: Gordon Larsen <gordon@the-larsens.ca>
 #          Nicu Pavel <npavel@mini-box.com>
-#          Ciprian Misaila <ciprian.misaila@mini-box.com>
-#  Powered by AerisWeather -  https://www.aerisweather.com/
 
 
 import calendar
@@ -26,7 +24,6 @@ class PWSWeather(RMParser):
     parserEnabled = True
     parserDebug = False
     parserInterval = 60 * 60 * 6
-    log.debug("Parser Interval: {}".format(parserInterval))
 
     params = {"clientID": ""
         , "Secret": ""
@@ -57,7 +54,6 @@ class PWSWeather(RMParser):
 
         self.params["_nearbyStationsIDList"] = []
         self.params["_airportStationsIDList"] = []
-        log.debug("Params: {}".format(self.params))
         clientID = self.params.get("clientID", None)
         if clientID is None or not clientID or not isinstance(clientID, str):
             log.error("No Client ID provided")
@@ -82,16 +78,13 @@ class PWSWeather(RMParser):
             limit = 10
 
         stationName = stationName.replace(" ", "")
-        log.debug("stationName: {}".format(stationName))
 
         apiURL = \
             "http://api.aerisapi.com/observations/summary/" + stationName + "?&format=json&radius=75mi&filter=allstations&limit=" + \
             str(limit) + "&client_id=" \
             + str(clientID) + "&client_secret=" + str(secret)
-        log.debug("apiURL is: {}".format(apiURL))
 
         self.jsonResponse = self.apiCall(apiURL)
-        log.debug(self.jsonResponse)
 
         if self.jsonResponse['success']:
             # populate nearby stations
@@ -100,7 +93,6 @@ class PWSWeather(RMParser):
 
                 pass
             else:
-                log.debug("Getting nearby stations")
                 self.getNearbyStations(self.jsonResponse)
                 return
 
@@ -111,12 +103,10 @@ class PWSWeather(RMParser):
         elif self.params.get("useSolarRadiation"):
             log.warning("Unable to get solar radiation. You need to specify a pws.")
 
-        log.debug("self.parserForecast={}".format(self.parserForecast))
         if self.parserForecast:
             apiURL = \
                 "http://api.aerisapi.com/forecasts/" + stationName + "?&format=json&filter=mdnt2mdnt&limit=7" + \
                 "&client_id=" + str(clientID) + "&client_secret=" + str(secret)
-            log.debug("Getting forecast from {}".format(apiURL))
             self.jsonResponse = self.apiCall(apiURL)
 
             self.__getSimpleForecast()
@@ -135,7 +125,6 @@ class PWSWeather(RMParser):
                 if len(key['id']) == 4:
                     airportStations.update({str(key['id']): key['loc']})
 
-            log.debug("airportStations: {}".format(airportStations))
         except:
             log.warning("No airport stations found!")
             self.lastKnownError = "Warning: No airport stations found!"
@@ -145,7 +134,6 @@ class PWSWeather(RMParser):
                 if ("MID" in key['id']) or ("PWS" in key['id']):
                     pwsStations.update({str(key['id']): key['loc']})
 
-            log.debug("pwsStations: {}".format(pwsStations))
 
         except:
             log.warning("No pws stations found!")
@@ -255,10 +243,8 @@ class PWSWeather(RMParser):
             if self.params.get("useSolarRadiation"):
                 solarradiation = self.__toFloat(dailysummary["solrad"]["avgWM2"])
                 # needs to be converted from watt/sqm*h to Joule/sqm
-
                 if solarradiation is not None:
                     solarradiation *= 0.0864
-
                 self.addValue(RMParser.dataType.SOLARRADIATION, timestamp, solarradiation)
 
             log.debug(
@@ -288,12 +274,6 @@ class PWSWeather(RMParser):
                 timestamp = int(timestamp)
 
                 if timestamp < maxDayTimestamp:
-
-                    #tt = self.__toInt(key["timestamp"])
-                    #tt = rmGetStartOfDay(tt)
-                    #if tt > maxDayTimestamp:
-                    #    break
-                    #timestamp = self.__toInt(tt)
                     temperatureMax = self.__toFloat(key["maxTempC"])
                     temperatureMin = self.__toFloat(key["minTempC"])
                     wind = self.__toFloat(key["windSpeedKPH"])
@@ -313,14 +293,6 @@ class PWSWeather(RMParser):
                     self.addValue(RMParser.dataType.MINTEMP, timestamp, temperatureMin)
                     self.addValue(RMParser.dataType.MAXTEMP, timestamp, temperatureMax)
                     self.addValue(RMParser.dataType.CONDITION, timestamp, condition)
-
-                    log.debug(timestamp)
-                    log.debug(temperatureMax)
-                    log.debug(temperatureMin)
-                    log.debug(wind)
-                    log.debug(humidity)
-                    log.debug(qpf)
-                    log.debug(condition)
 
         except:
             log.error("Failed to get simple forecast")

@@ -7,36 +7,6 @@
 #
 # Author: Pedro J. Pereira <pjpeartree@gmail.com>
 #
-# 20200209:
-#   - Initial version using data from a GW1000 with WH3000SE sensor array
-# 20200902:
-#   - Check device name to avoid detection of unsupported local consoles.
-#   - Try to find the device within 5 retries.
-#   - Update discover socket timeout to 2 seconds.
-#   - Reduce the arithmetic effort by using cumulative numerical total divided by number of observations.
-# 20200903:
-#   - Adding Battery Temperature sensor ids.
-# 20200904:
-#   - Increase the default min and max temperatures.
-#   - Fix day max wind sensor byte size.
-#   - New helper function to report observations into rainmachine.
-#   - Move new day check into the perform function, for better code readability.
-#   - Performance improvement, keep observations in memory only, do not save them into a data file.
-#       Downside, in case of an unlikely power outage, the current day observations are lost.
-#       This also takes care of flash lifespan avoiding I/O operations.
-# 20200909
-#   - Fix init failure. Now the startOfDayTimestamp is set only on first usage.
-#   - Set default observation to None. This avoid report ignored sensors.
-# 20200915
-#   - Update isEnabledForLocation to match the default expected behaviour.
-#   - Remove unnecessary params.
-#   - Fix default params error.
-# 20201005
-#   - Update the reset observations function.
-# 20201024
-#   - Cast observation value to float to perform the average calculations.
-#   - Remove unused import rmGetStartOfDayUtc.
-#
 # LICENSE: GNU General Public License v3.0
 # GitHub: https://github.com/pjpeartree/rainmachine-gw1000
 #

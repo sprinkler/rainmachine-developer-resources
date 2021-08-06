@@ -1,15 +1,6 @@
 # Copyright (c) 2018 Bobsplace Media Engineering
 # All rights reserved.
 # Author: Bob Paauwe <bpaauwe@bobsplace.com>
-#
-# Version 1.2.0   06/30/2020  (G.H. Gifford)
-#  - Added ability to capture data from either TEMPEST or Air+Sky weather station. 
-#      - updates Device Type, Serial Num, and UPD data indexes
-#      - don't use with both TEMPEST and Air+Sky devices. Rain totals will be 2x actual. 
-#  - Correction: Wind_Tot counter was not being reset on new day.    
-#  - Update to send yesterday's end of day results only once.
-#
-#
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
 # to deal in the Software without restriction, including without limitation
@@ -51,14 +42,9 @@ import time as mod_time
 class WeatherFlow(RMParser):
     parserName = "WeatherFlow Personal Weather Station"
     parserDescription = "Retrieves data from a WeatherFlow Smart Weather Station on local network"
-    parserForecast = False # True if parser provides future forecast data
-    parserHistorical = True # True if parser also provides historical data (only actual observed data)
-    # parserInterval defines how often the mixer will call this to retrieve
-    # data. The default is set to 300 seconds.  It should not be set to
-    # less than 60 seconds as the WeatherFlow data is only updated once a
-    # minute.
-    parserInterval = 600        # 10min - Higher freq to record rain in case of pwr outage. Your parser running interval in seconds, 
-                                #         data will only be mixed in hourly intervals
+    parserForecast = False 
+    parserHistorical = True
+    parserInterval = 600
     #parserDebug = False
     parserDebug = True
     parserEnabled = True
@@ -68,7 +54,7 @@ class WeatherFlow(RMParser):
 
     # Users must supply the sensor serial numbers
     params = {
-        "AirSerialNumber" : "AR-00000000",           
+        "AirSerialNumber" : "AR-00000000",
         "SkySerialNumber" : "SK-00000000",          
         "TempestSerialNum": "ST-00000000"           
     }
