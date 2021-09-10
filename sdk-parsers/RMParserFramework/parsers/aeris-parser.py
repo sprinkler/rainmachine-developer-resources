@@ -2,8 +2,6 @@
 # All rights reserved.
 # Authors: Gordon Larsen <gordon@the-larsens.ca>
 
-
-import calendar
 import datetime
 import json
 import time

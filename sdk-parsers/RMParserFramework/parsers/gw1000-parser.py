@@ -1,12 +1,5 @@
 # Wi-Fi Weather Station Gateway, Ecowitt GW1000, parser for the RainMachine sprinkler controller.
-#
-# This parser was created to avoid the use of cloud solutions, like WUnderground.com or
-# Ecowitt.net (API not available yet). The parser establishes a direct connection between
-# the GW1000 and the RainMachine devices. You can still use WUnderground too but now you
-# have two sources in case either one decides to change something or has a problem.
-#
 # Author: Pedro J. Pereira <pjpeartree@gmail.com>
-#
 # LICENSE: GNU General Public License v3.0
 # GitHub: https://github.com/pjpeartree/rainmachine-gw1000
 #
@@ -22,10 +15,9 @@ from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
 from RMUtilsFramework.rmTimeUtils import rmGetStartOfDay
 
-
 class GW1000(RMParser):
     parserName = 'Ecowitt GW1000 Weather Gateway'
-    parserDescription = 'Wi-Fi Weather Station Gateway, Ecowitt GW1000 direct data connection'
+    parserDescription = 'Wi-Fi Weather Station Gateway, Ecowitt GW1000 direct data connection on local network'
     parserForecast = False
     parserHistorical = True
     parserEnabled = False
@@ -153,102 +145,102 @@ class GW1000(RMParser):
     def _read_sensor(self, data, index):
         switcher = {
             b'\x01': (self._ignore_sensor, 2),  # Indoor Temperature (C), size in bytes:2
-            b'\x02': (self._outdoor_temperature, 2),  # Outdoor Temperature (C), size in bytes:2
-            b'\x03': (self._ignore_sensor, 2),  # Dew point (C), size in bytes:2
-            b'\x04': (self._ignore_sensor, 2),  # Wind chill (C), size in bytes:2
-            b'\x05': (self._ignore_sensor, 2),  # Heat index (C), size in bytes:2
-            b'\x06': (self._ignore_sensor, 1),  # Indoor Humidity (%), size in bytes:1
-            b'\x07': (self._outdoor_humidity, 1),  # Outdoor Humidity (%), size in bytes:1
-            b'\x08': (self._ignore_sensor, 2),  # Absolutely Barometric (hpa), size in bytes:2
-            b'\x09': (self._relative_barometric, 2),  # Relative Barometric (hpa), size in bytes:2
-            b'\x0A': (self._ignore_sensor, 2),  # Wind Direction (360), size in bytes:2
-            b'\x0B': (self._wind_speed, 2),  # Wind Speed (m/s), size in bytes:2
-            b'\x0C': (self._ignore_sensor, 2),  # Gust Speed (m/s), size in bytes:2
-            b'\x0D': (self._ignore_sensor, 2),  # Rain Event (mm), size in bytes:2
-            b'\x0E': (self._ignore_sensor, 2),  # Rain Rate (mm/h), size in bytes:2
-            b'\x0F': (self._ignore_sensor, 2),  # Rain hour (mm), size in bytes:2
-            b'\x10': (self._rain_day, 2),  # Rain Day (mm), size in bytes:2
-            b'\x11': (self._ignore_sensor, 2),  # Rain Week (mm), size in bytes:2
-            b'\x12': (self._ignore_sensor, 4),  # Rain Month (mm), size in bytes:4
-            b'\x13': (self._ignore_sensor, 4),  # Rain Year (mm), size in bytes:4
-            b'\x14': (self._ignore_sensor, 4),  # Rain Totals (mm), size in bytes:4
-            b'\x15': (self._light, 4),  # Light  (lux), size in bytes:4
-            b'\x16': (self._ignore_sensor, 2),  # UV  (uW/m2), size in bytes:2
-            b'\x17': (self._ignore_sensor, 1),  # UVI (0-15 index), size in bytes:1
-            b'\x18': (self._ignore_sensor, 6),  # Date and time, size in bytes:6
-            b'\x19': (self._ignore_sensor, 2),  # Day max_wind (m/s), size in bytes:2
-            b'\x1A': (self._ignore_sensor, 2),  # Temperature 1 (C), size in bytes:2
-            b'\x1B': (self._ignore_sensor, 2),  # Temperature 2 (C), size in bytes:2
-            b'\x1C': (self._ignore_sensor, 2),  # Temperature 3 (C), size in bytes:2
-            b'\x1D': (self._ignore_sensor, 2),  # Temperature 4 (C), size in bytes:2
-            b'\x1E': (self._ignore_sensor, 2),  # Temperature 5 (C), size in bytes:2
-            b'\x1F': (self._ignore_sensor, 2),  # Temperature 6 (C), size in bytes:2
-            b'\x20': (self._ignore_sensor, 2),  # Temperature 7 (C), size in bytes:2
-            b'\x21': (self._ignore_sensor, 2),  # Temperature 8 (C), size in bytes:2
-            b'\x22': (self._ignore_sensor, 1),  # Humidity 1 0-100%, size in bytes:1
-            b'\x23': (self._ignore_sensor, 1),  # Humidity 2 0-100%, size in bytes:1
-            b'\x24': (self._ignore_sensor, 1),  # Humidity 3 0-100%, size in bytes:1
-            b'\x25': (self._ignore_sensor, 1),  # Humidity 4 0-100%, size in bytes:1
-            b'\x26': (self._ignore_sensor, 1),  # Humidity 5 0-100%, size in bytes:1
-            b'\x27': (self._ignore_sensor, 1),  # Humidity 6 0-100%, size in bytes:1
-            b'\x28': (self._ignore_sensor, 1),  # Humidity 7 0-100%, size in bytes:1
-            b'\x29': (self._ignore_sensor, 1),  # Humidity 8 0-100%, size in bytes:1
-            b'\x2A': (self._ignore_sensor, 2),  # PM2.5 1 (ug/m3), size in bytes:2
-            b'\x2B': (self._ignore_sensor, 2),  # Soil Temperature_1 (C), size in bytes:2
-            b'\x2C': (self._ignore_sensor, 1),  # Soil Moisture_1 (%), size in bytes:1
-            b'\x2D': (self._ignore_sensor, 2),  # Soil Temperature_2 (C), size in bytes:2
-            b'\x2E': (self._ignore_sensor, 1),  # Soil Moisture_2 (%), size in bytes:1
-            b'\x2F': (self._ignore_sensor, 2),  # Soil Temperature_3 (C), size in bytes:2
-            b'\x30': (self._ignore_sensor, 1),  # Soil Moisture_3 (%), size in bytes:1
-            b'\x31': (self._ignore_sensor, 2),  # Soil Temperature_4 (C), size in bytes:2
-            b'\x32': (self._ignore_sensor, 1),  # Soil Moisture_4 (%), size in bytes:1
-            b'\x33': (self._ignore_sensor, 2),  # Soil Temperature_5 (C), size in bytes:2
-            b'\x34': (self._ignore_sensor, 1),  # Soil Moisture_5 (%), size in bytes:1
-            b'\x35': (self._ignore_sensor, 2),  # Soil Temperature_6 (C), size in bytes:2
-            b'\x36': (self._ignore_sensor, 1),  # Soil Moisture_6 (%), size in bytes:1
-            b'\x37': (self._ignore_sensor, 2),  # Soil Temperature_7 (C), size in bytes:2
-            b'\x38': (self._ignore_sensor, 1),  # Soil Moisture_7 (%), size in bytes:1
-            b'\x39': (self._ignore_sensor, 2),  # Soil Temperature_8 (C), size in bytes:2
-            b'\x3A': (self._ignore_sensor, 1),  # Soil Moisture_8 (%), size in bytes:1
-            b'\x3B': (self._ignore_sensor, 2),  # Soil Temperature_9 (C), size in bytes:2
-            b'\x3C': (self._ignore_sensor, 1),  # Soil Moisture_9 (%), size in bytes:1
-            b'\x3D': (self._ignore_sensor, 2),  # Soil Temperature_10 (C), size in bytes:2
-            b'\x3E': (self._ignore_sensor, 1),  # Soil Moisture_10 (%), size in bytes:1
-            b'\x3F': (self._ignore_sensor, 2),  # Soil Temperature_11 (C), size in bytes:2
-            b'\x40': (self._ignore_sensor, 1),  # Soil Moisture_11 (%), size in bytes:1
-            b'\x41': (self._ignore_sensor, 2),  # Soil Temperature_12 (C), size in bytes:2
-            b'\x42': (self._ignore_sensor, 1),  # Soil Moisture_12 (%), size in bytes:1
-            b'\x43': (self._ignore_sensor, 2),  # Soil Temperature_13 (C), size in bytes:2
-            b'\x44': (self._ignore_sensor, 1),  # Soil Moisture_13 (%), size in bytes:1
-            b'\x45': (self._ignore_sensor, 2),  # Soil Temperature_14 (C), size in bytes:2
-            b'\x46': (self._ignore_sensor, 1),  # Soil Moisture_14 (%), size in bytes:1
-            b'\x47': (self._ignore_sensor, 2),  # Soil Temperature_15 (C), size in bytes:2
-            b'\x48': (self._ignore_sensor, 1),  # Soil Moisture_15 (%), size in bytes:1
-            b'\x49': (self._ignore_sensor, 2),  # Soil Temperature_16 (C), size in bytes:2
-            b'\x4A': (self._ignore_sensor, 1),  # Soil Moisture_16 (%), size in bytes:1
-            b'\x4C': (self._ignore_sensor, 16),  # All_sensor lowbatt, size in bytes:16
-            b'\x4D': (self._ignore_sensor, 2),  # 24h_avg pm25_ch1 (ug/m3), size in bytes:2
-            b'\x4E': (self._ignore_sensor, 2),  # 24h_avg pm25_ch2 (ug/m3), size in bytes:2
-            b'\x4F': (self._ignore_sensor, 2),  # 24h_avg pm25_ch3 (ug/m3), size in bytes:2
-            b'\x50': (self._ignore_sensor, 2),  # 24h_avg pm25_ch4 (ug/m3), size in bytes:2
-            b'\x51': (self._ignore_sensor, 2),  # PM2.5 2 (ug/m3), size in bytes:2
-            b'\x52': (self._ignore_sensor, 2),  # PM2.5 3 (ug/m3), size in bytes:2
-            b'\x53': (self._ignore_sensor, 2),  # PM2.5 4 (ug/m3), size in bytes:2
-            b'\x58': (self._ignore_sensor, 1),  # Leak ch1 , size in bytes:1
-            b'\x59': (self._ignore_sensor, 1),  # Leak ch2 , size in bytes:1
-            b'\x5A': (self._ignore_sensor, 1),  # Leak ch3 , size in bytes:1
-            b'\x5B': (self._ignore_sensor, 1),  # Leak ch4 , size in bytes:1
-            b'\x60': (self._ignore_sensor, 1),  # Lightning distance 1-40KM, size in bytes:1
-            b'\x61': (self._ignore_sensor, 4),  # Lightning detected_time (UTC), size in bytes:4
-            b'\x62': (self._ignore_sensor, 4),  # Lightning power_time (UTC), size in bytes: 4
-            b'\x63': (self._ignore_sensor, 3),  # Battery Temperature 1 (C), size in bytes: 3
-            b'\x64': (self._ignore_sensor, 3),  # Battery Temperature 2 (C), size in bytes: 3
-            b'\x65': (self._ignore_sensor, 3),  # Battery Temperature 3 (C), size in bytes: 3
-            b'\x66': (self._ignore_sensor, 3),  # Battery Temperature 4 (C), size in bytes: 3
-            b'\x67': (self._ignore_sensor, 3),  # Battery Temperature 5 (C), size in bytes: 3
-            b'\x68': (self._ignore_sensor, 3),  # Battery Temperature 6 (C), size in bytes: 3
-            b'\x69': (self._ignore_sensor, 3),  # Battery Temperature 7 (C), size in bytes: 3
-            b'\x6A': (self._ignore_sensor, 3)  # Battery Temperature 8 (C), size in bytes: 3
+            b'\x02': (self._outdoor_temperature, 2),  # Outdoor Temperature (C)
+            b'\x03': (self._ignore_sensor, 2),  # Dew point (C)
+            b'\x04': (self._ignore_sensor, 2),  # Wind chill (C)
+            b'\x05': (self._ignore_sensor, 2),  # Heat index (C)
+            b'\x06': (self._ignore_sensor, 1),  # Indoor Humidity (%)
+            b'\x07': (self._outdoor_humidity, 1),  # Outdoor Humidity (%)
+            b'\x08': (self._ignore_sensor, 2),  # Absolutely Barometric (hpa)
+            b'\x09': (self._relative_barometric, 2),  # Relative Barometric (hpa)
+            b'\x0A': (self._ignore_sensor, 2),  # Wind Direction (360)
+            b'\x0B': (self._wind_speed, 2),  # Wind Speed (m/s)
+            b'\x0C': (self._ignore_sensor, 2),  # Gust Speed (m/s)
+            b'\x0D': (self._ignore_sensor, 2),  # Rain Event (mm)
+            b'\x0E': (self._ignore_sensor, 2),  # Rain Rate (mm/h)
+            b'\x0F': (self._ignore_sensor, 2),  # Rain hour (mm)
+            b'\x10': (self._rain_day, 2),  # Rain Day (mm)
+            b'\x11': (self._ignore_sensor, 2),  # Rain Week (mm)
+            b'\x12': (self._ignore_sensor, 4),  # Rain Month (mm)
+            b'\x13': (self._ignore_sensor, 4),  # Rain Year (mm)
+            b'\x14': (self._ignore_sensor, 4),  # Rain Totals (mm)
+            b'\x15': (self._light, 4),  # Light  (lux)
+            b'\x16': (self._ignore_sensor, 2),  # UV  (uW/m2)
+            b'\x17': (self._ignore_sensor, 1),  # UVI (0-15 index)
+            b'\x18': (self._ignore_sensor, 6),  # Date and time
+            b'\x19': (self._ignore_sensor, 2),  # Day max_wind (m/s)
+            b'\x1A': (self._ignore_sensor, 2),  # Temperature 1 (C)
+            b'\x1B': (self._ignore_sensor, 2),  # Temperature 2 (C)
+            b'\x1C': (self._ignore_sensor, 2),  # Temperature 3 (C)
+            b'\x1D': (self._ignore_sensor, 2),  # Temperature 4 (C)
+            b'\x1E': (self._ignore_sensor, 2),  # Temperature 5 (C)
+            b'\x1F': (self._ignore_sensor, 2),  # Temperature 6 (C)
+            b'\x20': (self._ignore_sensor, 2),  # Temperature 7 (C)
+            b'\x21': (self._ignore_sensor, 2),  # Temperature 8 (C)
+            b'\x22': (self._ignore_sensor, 1),  # Humidity 1 0-100%
+            b'\x23': (self._ignore_sensor, 1),  # Humidity 2 0-100%
+            b'\x24': (self._ignore_sensor, 1),  # Humidity 3 0-100%
+            b'\x25': (self._ignore_sensor, 1),  # Humidity 4 0-100%
+            b'\x26': (self._ignore_sensor, 1),  # Humidity 5 0-100%
+            b'\x27': (self._ignore_sensor, 1),  # Humidity 6 0-100%
+            b'\x28': (self._ignore_sensor, 1),  # Humidity 7 0-100%
+            b'\x29': (self._ignore_sensor, 1),  # Humidity 8 0-100%
+            b'\x2A': (self._ignore_sensor, 2),  # PM2.5 1 (ug/m3)
+            b'\x2B': (self._ignore_sensor, 2),  # Soil Temperature_1 (C)
+            b'\x2C': (self._ignore_sensor, 1),  # Soil Moisture_1 (%)
+            b'\x2D': (self._ignore_sensor, 2),  # Soil Temperature_2 (C)
+            b'\x2E': (self._ignore_sensor, 1),  # Soil Moisture_2 (%)
+            b'\x2F': (self._ignore_sensor, 2),  # Soil Temperature_3 (C)
+            b'\x30': (self._ignore_sensor, 1),  # Soil Moisture_3 (%)
+            b'\x31': (self._ignore_sensor, 2),  # Soil Temperature_4 (C)
+            b'\x32': (self._ignore_sensor, 1),  # Soil Moisture_4 (%)
+            b'\x33': (self._ignore_sensor, 2),  # Soil Temperature_5 (C)
+            b'\x34': (self._ignore_sensor, 1),  # Soil Moisture_5 (%)
+            b'\x35': (self._ignore_sensor, 2),  # Soil Temperature_6 (C)
+            b'\x36': (self._ignore_sensor, 1),  # Soil Moisture_6 (%)
+            b'\x37': (self._ignore_sensor, 2),  # Soil Temperature_7 (C)
+            b'\x38': (self._ignore_sensor, 1),  # Soil Moisture_7 (%)
+            b'\x39': (self._ignore_sensor, 2),  # Soil Temperature_8 (C)
+            b'\x3A': (self._ignore_sensor, 1),  # Soil Moisture_8 (%)
+            b'\x3B': (self._ignore_sensor, 2),  # Soil Temperature_9 (C)
+            b'\x3C': (self._ignore_sensor, 1),  # Soil Moisture_9 (%)
+            b'\x3D': (self._ignore_sensor, 2),  # Soil Temperature_10 (C)
+            b'\x3E': (self._ignore_sensor, 1),  # Soil Moisture_10 (%)
+            b'\x3F': (self._ignore_sensor, 2),  # Soil Temperature_11 (C)
+            b'\x40': (self._ignore_sensor, 1),  # Soil Moisture_11 (%)
+            b'\x41': (self._ignore_sensor, 2),  # Soil Temperature_12 (C)
+            b'\x42': (self._ignore_sensor, 1),  # Soil Moisture_12 (%)
+            b'\x43': (self._ignore_sensor, 2),  # Soil Temperature_13 (C)
+            b'\x44': (self._ignore_sensor, 1),  # Soil Moisture_13 (%)
+            b'\x45': (self._ignore_sensor, 2),  # Soil Temperature_14 (C)
+            b'\x46': (self._ignore_sensor, 1),  # Soil Moisture_14 (%)
+            b'\x47': (self._ignore_sensor, 2),  # Soil Temperature_15 (C)
+            b'\x48': (self._ignore_sensor, 1),  # Soil Moisture_15 (%)
+            b'\x49': (self._ignore_sensor, 2),  # Soil Temperature_16 (C)
+            b'\x4A': (self._ignore_sensor, 1),  # Soil Moisture_16 (%)
+            b'\x4C': (self._ignore_sensor, 16),  # All_sensor lowbatt
+            b'\x4D': (self._ignore_sensor, 2),  # 24h_avg pm25_ch1 (ug/m3)
+            b'\x4E': (self._ignore_sensor, 2),  # 24h_avg pm25_ch2 (ug/m3)
+            b'\x4F': (self._ignore_sensor, 2),  # 24h_avg pm25_ch3 (ug/m3)
+            b'\x50': (self._ignore_sensor, 2),  # 24h_avg pm25_ch4 (ug/m3)
+            b'\x51': (self._ignore_sensor, 2),  # PM2.5 2 (ug/m3)
+            b'\x52': (self._ignore_sensor, 2),  # PM2.5 3 (ug/m3)
+            b'\x53': (self._ignore_sensor, 2),  # PM2.5 4 (ug/m3)
+            b'\x58': (self._ignore_sensor, 1),  # Leak ch1
+            b'\x59': (self._ignore_sensor, 1),  # Leak ch2
+            b'\x5A': (self._ignore_sensor, 1),  # Leak ch3
+            b'\x5B': (self._ignore_sensor, 1),  # Leak ch4
+            b'\x60': (self._ignore_sensor, 1),  # Lightning distance 1-40KM
+            b'\x61': (self._ignore_sensor, 4),  # Lightning detected_time (UTC)
+            b'\x62': (self._ignore_sensor, 4),  # Lightning power_time (UTC)
+            b'\x63': (self._ignore_sensor, 3),  # Battery Temperature 1 (C)
+            b'\x64': (self._ignore_sensor, 3),  # Battery Temperature 2 (C)
+            b'\x65': (self._ignore_sensor, 3),  # Battery Temperature 3 (C)
+            b'\x66': (self._ignore_sensor, 3),  # Battery Temperature 4 (C)
+            b'\x67': (self._ignore_sensor, 3),  # Battery Temperature 5 (C)
+            b'\x68': (self._ignore_sensor, 3),  # Battery Temperature 6 (C)
+            b'\x69': (self._ignore_sensor, 3),  # Battery Temperature 7 (C)
+            b'\x6A': (self._ignore_sensor, 3)  # Battery Temperature 8 (C)
         }
         sensor_id = data[index]
         sensor_reader, size = switcher.get(sensor_id, (self._unknown_sensor, 1))
@@ -331,7 +323,6 @@ class GW1000(RMParser):
         else:
             self.lastKnownError = message
         log.error(self.lastKnownError)
-
 
 # Helper function to return an Integer from a network packet as BigEndian with different sizes, signed or unsigned.
 def read_int(data, unsigned, size):
