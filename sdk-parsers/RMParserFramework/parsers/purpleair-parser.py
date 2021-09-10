@@ -12,7 +12,6 @@ from RMUtilsFramework.rmLogging import log
 
 import json
 
-
 PROJECT = "rainmachine-weather-purpleair"
 VERSION = "0.2"
 ABOUT_URL = "https://github.com/medmunds/rainmachine-weather-purpleair"
