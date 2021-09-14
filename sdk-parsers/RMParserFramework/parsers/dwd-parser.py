@@ -103,7 +103,7 @@ class BufferedRandomReader:
 # Parser class
 class DWDParser(RMParser):
     parserName = "Deutscher Wetterdienst"
-    parserDescription = "German Weather Service (DWD)"
+    parserDescription = "German Weather Service (dwd.de)"
     parserForecast = True
     parserHistorical = True
     parserInterval = 6 * 3600

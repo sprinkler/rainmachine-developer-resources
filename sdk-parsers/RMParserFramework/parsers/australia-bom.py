@@ -6,8 +6,8 @@ import math
 import json
 
 class AustraliaBOM(RMParser):
-    parserName = "Australia Weather Bureau"         # Your parser name
-    parserDescription = "Commonwealth of Australia Bureau of Meteorology" # A description for this parser
+    parserName = "Australia Weather Bureau"
+    parserDescription = "Commonwealth of Australia Bureau of Meteorology"
     # file schema described here http://www.bom.gov.au/schema/doc/AMOC_V1.pdf
 
     parserEnabled = True

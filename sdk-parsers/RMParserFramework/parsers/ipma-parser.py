@@ -30,7 +30,7 @@ class IPMA(RMParser):
     parserDescription = "Local forecasts in Portugal from the Instituto Português do Mar e da Atmosfera (IPMA)"
     parserForecast = True
     parserHistorical = False
-    parserInterval = 3600
+    parserInterval = 3600 * 6
     parserEnabled = False
     parserDebug = False
 
