@@ -4,15 +4,13 @@ from RMUtilsFramework.rmTimeUtils import rmCurrentTimestamp
 import json    # Your parser needed libraries
 
 class Mesonet(RMParser):
-    parserName = "Mesonet"         # Your parser name
-    parserDescription = "The Oklahoma Mesonet is a world-class network of environmental monitoring stations. " \
-                        "The network was designed and implemented by scientists at the University of Oklahoma (OU) " \
-                        "and at Oklahoma State University (OSU)." # A description for this parser
+    parserName = "Mesonet"
+    parserDescription = "The Oklahoma Mesonet is a world-class network of environmental monitoring stations."
 
     parserEnabled = True
-    parserInterval = 3600                    # Your parser running interval in seconds
-    parserDebug = True                      # Don't show extra debug messages
-    params = {}                              # Internal params that can be changed with API call /parser/{id}/params
+    parserInterval = 3600
+    parserDebug = True
+    params = {'StationId': 'ALTU'}
 
     def isEnabledForLocation(self, timezone, lat, long):
         return Mesonet.parserEnabled
@@ -20,8 +18,8 @@ class Mesonet(RMParser):
     # The function that will be executed must have this name
     def perform(self):
         # downloading data from a URL convenience function since other python libraries can be used
-        URL = "http://lab.zanek.net/mesonet/api/currentobservations"
-        stationID = "ALTU"
+        URL = "https://lab.zanek.net/api/currentobservations_final"
+        stationID = self.params['StationId']
         data = self.openURL(URL)
 
 

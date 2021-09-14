@@ -14,7 +14,7 @@ from urllib import urlopen as request
 
 
 class MeteobridgePWS(RMParser):
-    parserName = "Meteobridge PWS Parser"
+    parserName = "Meteobridge Personal Weather Station"
     parserDescription = "Personal Weather Station data upload from Meteobridge"
     parserForecast = False
     parserHistorical = True

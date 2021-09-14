@@ -6,8 +6,8 @@ import math
 import json
 
 class AustraliaBOM(RMParser):
-    parserName = "Australia BoM"         # Your parser name
-    parserDescription = " Commonwealth of Australia Bureau of Meteorology" # A description for this parser
+    parserName = "Australia Weather Bureau"
+    parserDescription = "Commonwealth of Australia Bureau of Meteorology"
     # file schema described here http://www.bom.gov.au/schema/doc/AMOC_V1.pdf
 
     parserEnabled = True
@@ -886,6 +886,8 @@ class AustraliaBOM(RMParser):
                 code = 'T'
             elif wmo['state'] == "NT":
                 code = 'D'
+            elif wmo['state'] == "SA":
+                code = 'S'
             return "http://www.bom.gov.au/fwo/ID" + code + "60801/ID" + code + "60801." + str(wmo['id']) + ".json"
 
         return None
@@ -1306,9 +1308,7 @@ class AustraliaBOM(RMParser):
 
 if __name__  == '__main__':
     p = AustraliaBOM()
-    #p.latitude = -27.3818618
-    p.latitude = -35.4123
-    p.longitude = 149.0936
-    #p.longitude = 152.7123378
+    p.latitude = -27.3818618
+    p.longitude = 152.7123378
 
     p.perform()

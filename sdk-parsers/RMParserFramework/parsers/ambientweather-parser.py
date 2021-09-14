@@ -28,7 +28,7 @@ import json
 import urllib, urllib2, ssl
 
 class AmbientWeatherParser(RMParser):
-    parserName = "Ambient Weather Network Parser"
+    parserName = "Ambient Weather Network"
     parserDescription = "Live personal weather station data from www.ambientweather.net"
     parserForecast = False
     parserHistorical = True

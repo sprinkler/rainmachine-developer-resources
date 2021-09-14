@@ -33,7 +33,6 @@ def _align_up(a, b):
 class BufferedRandomReader:
     """Create random-access, read-only buffered stream adapter from a sequential
     input stream which does not support random access (i.e., ```seek()```)
-
     Example::
 
         >>> stream = BufferedRandomReader(BytesIO('abc'))
@@ -102,14 +101,13 @@ class BufferedRandomReader:
 
 # Parser class
 class DWDParser(RMParser):
-    parserName = "DWD Parser"
-    parserDescription = "Parser for the german \"Deutscher Wetterdienst\". To get station ID please see: https://www.dwd.de/DE/leistungen/opendata/help/stationen/mosmix_stationskatalog.cfg?view=nasPublication&nn=16102"
+    parserName = "Deutscher Wetterdienst"
+    parserDescription = "German Weather Service (dwd.de)"
     parserForecast = True
     parserHistorical = True
     parserInterval = 6 * 3600
     parserDebug = False
     params = {"station": None}
-    defaultParams = {"station": "10637"}
 
     def perform(self):
         station = self.params.get("station", None)

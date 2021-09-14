@@ -8,10 +8,14 @@
 function Async() {
 	this.queue = [];
 	this.ready = false;
+	this.finished = false;
 	this.result = null;
 	this.debug = false;
 	this.onError = null;
 	this.onErrorParams = null;
+	this.withRetry = false;
+	this.retries = 5;
+	this.retryInterval = 10 * 1000;
 };
 
 Async.prototype.start = function(callback, param) {
@@ -42,15 +46,17 @@ Async.prototype.resolve = function() {
     if (! this.ready) {
 		this.ready = true;
         this.queue.forEach(function (value, index, ar) {
-        	instance.debug && console.log("ASYNC: function: %o, args(%d): %o", value, callbackArgs.length, callbackArgs);
+        	instance.debug && console.log("ASYNC: resolve(): %o, args(%d): %o", value, callbackArgs.length, callbackArgs);
             value.apply(instance, callbackArgs);
         });
 
         this.queue = undefined;
     }
     else {
-		console.log("ASYNC: resolve() messed up !");
+		console.log("ASYNC: resolve() fail !");
     }
+
+	this.finished = true;
 };
 
 Async.prototype.reject = function(error) {
@@ -64,7 +70,17 @@ Async.prototype.reject = function(error) {
 	}
 
     this.ready = false;
+	this.finished = true;
     this.queue = undefined;
+};
+
+
+Async.prototype.retry = function(retries, retryInterval) {
+	this.withRetry = true;
+	if (defined(retries)) this.retries = retries;
+	if (defined(retryInterval)) this.retryInterval = retryInterval * 1000;
+
+	return this;
 };
 
 Async.prototype.error = function(callback, paramsArray) {

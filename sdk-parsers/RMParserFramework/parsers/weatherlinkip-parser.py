@@ -16,7 +16,7 @@ import struct
 import binascii
 
 class WeatherLinkIP(RMParser):
-    parserName = "DavisWeatherLinkIP Parser"
+    parserName = "Davis Weather Link IP"
     parserDescription = "Davis Weather Station with WeatherLink IP (local network access)"
     parserForecast = False
     parserHistorical = True
