@@ -33,7 +33,6 @@ def _align_up(a, b):
 class BufferedRandomReader:
     """Create random-access, read-only buffered stream adapter from a sequential
     input stream which does not support random access (i.e., ```seek()```)
-
     Example::
 
         >>> stream = BufferedRandomReader(BytesIO('abc'))

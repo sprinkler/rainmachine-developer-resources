@@ -12,6 +12,7 @@
 # LICENSE: GNU General Public License v3.0
 # GitHub: https://github.com/pjpeartree/rainmachine-ipma
 #
+
 import json
 
 from RMParserFramework.rmParser import RMParser
