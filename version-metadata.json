@@ -36,7 +36,7 @@
       "instructions": "To install this weather parser make sure you connect to RainMachine via local network, it can't be installed over remote-access."
     },
     "sdk-parsers/RMParserFramework/parsers/dwd-parser.py": {
-      "version": "1.03",
+      "version": "1.04",
       "author": "Sebastian Kuhn",
       "name": "Deutscher Wetterdienst",
       "description": "German Weather Service (DWD)",
@@ -50,7 +50,7 @@
       "instructions": "https://github.com/pjpeartree/rainmachine-gw1000"
     },
     "sdk-parsers/RMParserFramework/parsers/ipma-parser.py": {
-      "version": "1.03",
+      "version": "1.04",
       "author": "Pedro J. Pereira <pjpeartree@gmail.com>",
       "name": "Portuguese Weather Bureau",
       "description": "Local forecasts in Portugal from the Instituto Português do Mar e da Atmosfera (IPMA)",
