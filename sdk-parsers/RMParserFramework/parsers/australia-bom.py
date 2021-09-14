@@ -1133,7 +1133,7 @@ class AustraliaBOM(RMParser):
             log.debug("Got a URL of %s" % URL)
 
         # Using the default user agent results in a 403: forbidden (wtf?)
-        data = self.openURL(URL, headers={"User-Agent":"curl/7.67.0", "Accept":"*/*"})
+        data = self.openURL(URL, headers={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.3", "Accept":"*/*"})
 
         if data is None:
             if self.parserDebug:
