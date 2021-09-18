@@ -29,7 +29,7 @@
       "instructions": ""
     },
     "sdk-parsers/RMParserFramework/parsers/australia-bom.py": {
-      "version": "1.03",
+      "version": "1.04",
       "author": "Community",
       "name": "Australia Weather Bureau",
       "description": "Commonwealth of Australia Bureau of Meteorology",
