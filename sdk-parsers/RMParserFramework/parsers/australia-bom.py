@@ -89,7 +89,7 @@ class AustraliaBOM(RMParser):
         # filtered on files that are available, and ones that have temp and rain
         # Sites with air temp ftp://ftp.bom.gov.au/anon2/home/ncc/metadata/lists_by_element/alpha/alphaAUS_3.txt
         # Sites with rain ftp://ftp.bom.gov.au/anon2/home/ncc/metadata/lists_by_element/alpha/alphaAUS_139.txt
-        # Some sites don't have files. I removed them (I don't get it)
+        # Some sites don't have files. I removed them (list has historical sites that no longer produce data)
         wmo_locations = {
             ("ADELAIDE (KENT TOWN)", -34.921100, 138.621600, "SA", 94675),
             ("ADELAIDE (WEST TERRACE / NGAYIRDAPIRA)", -34.925700, 138.583200, "SA", 94648),
