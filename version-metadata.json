@@ -50,7 +50,7 @@
       "instructions": "https://github.com/pjpeartree/rainmachine-gw1000"
     },
     "sdk-parsers/RMParserFramework/parsers/ipma-parser.py": {
-      "version": "1.04",
+      "version": "1.05",
       "author": "Pedro J. Pereira <pjpeartree@gmail.com>",
       "name": "Portuguese Weather Bureau",
       "description": "Local forecasts in Portugal from the Instituto Português do Mar e da Atmosfera (IPMA)",
@@ -71,7 +71,7 @@
       "instructions": ""
     },
     "sdk-parsers/RMParserFramework/parsers/purpleair-parser.py": {
-      "version": "1.02",
+      "version": "1.03",
       "author": "Mike Edmunds <medmunds@gmail.com>",
       "name": "PurpleAir Parser",
       "description": "Obtain temperature from PurpleAir sensor",
