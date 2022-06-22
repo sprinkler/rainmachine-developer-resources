@@ -8,7 +8,7 @@
       "instructions": ""
     },
     "sdk-parsers/RMParserFramework/parsers/accuweather-parser.py": {
-      "version": "1.01",
+      "version": "1.02",
       "author": "gitzone83 <mxhajduczenia@gmail.com>",
       "name": "AccuWeather Network Weather Information Parser",
       "description": "Weather data from www.accuweather.com",
