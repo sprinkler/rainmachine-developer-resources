@@ -71,7 +71,7 @@
       "instructions": ""
     },
     "sdk-parsers/RMParserFramework/parsers/purpleair-parser.py": {
-      "version": "1.03",
+      "version": "2.00",
       "author": "Mike Edmunds <medmunds@gmail.com>",
       "name": "PurpleAir Parser",
       "description": "Obtain temperature from PurpleAir sensor",
