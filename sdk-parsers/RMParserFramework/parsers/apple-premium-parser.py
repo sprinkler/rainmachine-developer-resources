@@ -33,7 +33,7 @@ class AppleWeatherKit(RMParser):
         log.info("Apple Premium WeatherKit perform()")
 
         self.lastKnownError = ""
-        URL = "https://weather.staging.rainmachine.com/appleweather"
+        URL = "https://weather.rainmachine.com/appleweather"
 
         try:
             globalSettings.cloud.readID()

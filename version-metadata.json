@@ -1,19 +1,5 @@
 {
   "files": {
-    "sdk-parsers/RMParserFramework/parsers/apple-premium-parser.py": {
-      "version": "1.1",
-      "author": "RainMachine <apps@rainmachine.com>",
-      "name": "[Premium] Apple WeatherKit",
-      "description": "State of the art global weather forecast that provides hyperlocal weather information and best precipitation forecast. This service is only available for RainMachine Premium users.",
-      "instructions": ""
-    },
-    "sdk-parsers/RMParserFramework/parsers/cwop-parser.py": {
-      "version": "2.02",
-      "author": "RainMachine <apps@rainmachine.com>",
-      "name": "Weather Stations",
-      "description": "Observed data from World-Wide Weather Stations Citizen Weather Observer Program",
-      "instructions": ""
-    },
     "sdk-parsers/RMParserFramework/parsers/accuweather-parser.py": {
       "version": "1.02",
       "author": "gitzone83 <mxhajduczenia@gmail.com>",
@@ -118,6 +104,20 @@
       "name": "Australia WillyWeather",
       "description": "Retrieve data from WillyWeather Australian weather service",
       "instructions": "https://github.com/safepay/rainmachine-willyweather"
+    },
+    "sdk-parsers/RMParserFramework/parsers/cwop-parser.py": {
+      "version": "2.02",
+      "author": "RainMachine <apps@rainmachine.com>",
+      "name": "Weather Stations",
+      "description": "Observed data from World-Wide Weather Stations Citizen Weather Observer Program",
+      "instructions": ""
+    },
+    "sdk-parsers/RMParserFramework/parsers/apple-premium-parser.py": {
+      "version": "1.1",
+      "author": "RainMachine <apps@rainmachine.com>",
+      "name": "[Premium] Apple WeatherKit",
+      "description": "State of the art global weather forecast that provides hyperlocal weather information and best precipitation forecast. This service is only available for RainMachine Premium users.",
+      "instructions": ""
     }
   }
 }
