@@ -108,9 +108,6 @@ class AppleWeatherKit(RMParser):
                         self.__conditionConvert(day["overnightForecast"]["conditionCode"])
                     ])
 
-                    log.info(self.__conditionConvert(day["daytimeForecast"]["conditionCode"]))
-                    log.info(self.__conditionConvert(day["overnightForecast"]["conditionCode"]))
-
                     wind.extend([
                         self.convertKmhToMS(day["daytimeForecast"]["windSpeed"]),
                         self.convertKmhToMS(day["overnightForecast"]["windSpeed"])
