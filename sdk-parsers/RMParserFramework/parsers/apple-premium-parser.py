@@ -10,7 +10,7 @@ import json
 
 class AppleWeatherKit(RMParser):
     parserName = "[Premium] Apple WeatherKit Parser"
-    parserDescription = "Global weather service from Apple for RainMachine Premium subscribers"
+    parserDescription = "State of the art global weather forecast that provides hyperlocal weather information and best precipitation forecast. This service is only available for RainMachine Premium service users."
     parserForecast = True
     parserHistorical = False
     parserID = "applepremium"

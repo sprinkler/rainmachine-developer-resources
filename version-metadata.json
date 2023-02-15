@@ -115,8 +115,8 @@
     "sdk-parsers/RMParserFramework/parsers/apple-premium-parser.py": {
       "version": "1.14",
       "author": "RainMachine <apps@rainmachine.com>",
-      "name": "[Premium] Apple WeatherKit",
-      "description": "State of the art global weather forecast that provides hyperlocal weather information and best precipitation forecast. This service is only available for RainMachine Premium users.",
+      "name": "[Premium] Apple WeatherKit Parser",
+      "description": "State of the art global weather forecast that provides hyperlocal weather information and best precipitation forecast. This service is only available for RainMachine Premium service users.",
       "instructions": ""
     }
   }
