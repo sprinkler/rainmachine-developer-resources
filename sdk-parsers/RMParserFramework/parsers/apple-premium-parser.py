@@ -2,14 +2,11 @@
 # All rights reserved.
 # Authors: Nicu Pavel <npavel@mini-box.com>
 
-
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
 from RMUtilsFramework.rmTimeUtils import *
 from RMUtilsFramework.rmUtils import convertKmhToMS
 from RMDataFramework.rmUserSettings import globalSettings
-from urllib2 import URLError
-from time import time
 import json
 
 class AppleWeatherKit(RMParser):
@@ -23,18 +20,10 @@ class AppleWeatherKit(RMParser):
     parserDebug = True
 
     def perform(self):
-        # Albany, NY, USA
-        #lat = 42.63
-        #lon = -73.76
-
         lat = globalSettings.location.latitude
         lon = globalSettings.location.longitude
-
-        log.info("Apple Premium WeatherKit perform()")
-
         self.lastKnownError = ""
         URL = "https://weather.rainmachine.com/appleweather"
-
         try:
             globalSettings.cloud.readID()
             if not globalSettings.cloud.enabled \
@@ -63,16 +52,13 @@ class AppleWeatherKit(RMParser):
             if self.parserDebug:
                 log.info(json.dumps(data, indent=4))
             result = self.__parseForecast(data)
-
             return result
         except Exception, e:
            log.error(e)
 
         return False
 
-
     def __parseForecast(self, forecastDict):
-        days = []
         forecastDates = []
         mint = []
         maxt = []
@@ -212,41 +198,6 @@ class AppleWeatherKit(RMParser):
             return  RMParser.conditionType.Cold
         else:
             return  RMParser.conditionType.Unknown
-
-    def __generateJWT(self):
-        """
-        Generates a JWT token for Apple WeatherKit:
-        https://developer.apple.com/documentation/weatherkitrestapi/request_authentication_for_weatherkit_rest_api
-        :return:
-        JWT Token
-        """
-        import jwt
-
-        log.info("Apple WeatherKit __generateJWT()")
-        if "keyFile" in self.params and not "keyContent" in self.params:
-            with open(self.params["keyFile"], "r") as keyFile:
-                self.params["keyContent"] = keyFile.read()
-
-        currentTime = int(time())
-        expireTime = currentTime + 60 * 60 * 24 * 365
-
-        payload = {
-            "iss": self.params["teamId"],
-            "iat": currentTime,
-            "exp": expireTime,
-            "sub": self.params["serviceId"]
-        }
-        headers = {
-            "alg": self.params["tokenAlg"],
-            "kid": self.params["keyId"],
-            "id": self.params["teamId"] + "." + self.params["serviceId"],
-        }
-
-        token = jwt.encode(payload, self.params["keyContent"], algorithm=self.params["tokenAlg"], headers=headers)
-        log.info(token)
-        return token
-
-
 
     def __openURL(self, url, params, token):
         return self.openURL(url, params, headers = {
