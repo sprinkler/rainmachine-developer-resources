@@ -5,7 +5,6 @@
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
 from RMUtilsFramework.rmTimeUtils import *
-from RMUtilsFramework.rmUtils import convertKmhToMS
 from RMDataFramework.rmUserSettings import globalSettings
 import json
 
@@ -113,8 +112,8 @@ class AppleWeatherKit(RMParser):
                     log.info(self.__conditionConvert(day["overnightForecast"]["conditionCode"]))
 
                     wind.extend([
-                        convertKmhToMS(day["daytimeForecast"]["windSpeed"]),
-                        convertKmhToMS(day["overnightForecast"]["windSpeed"])
+                        self.convertKmhToMS(day["daytimeForecast"]["windSpeed"]),
+                        self.convertKmhToMS(day["overnightForecast"]["windSpeed"])
                     ])
 
                     humidity.extend([
@@ -146,6 +145,14 @@ class AppleWeatherKit(RMParser):
         except:
             pass
         return None
+
+    # Convert km/h to m/s # Backward compatibility
+    def convertKmhToMS(self, value):
+        try:
+            value = float(value) * 0.27777778
+            return value
+        except:
+            return None
 
     def __conditionConvert(self, conditionStr):
         if 'MostlyCloudy' == conditionStr:
