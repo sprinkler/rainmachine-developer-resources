@@ -16,7 +16,7 @@ class AppleWeatherKit(RMParser):
     parserID = "applepremium"
     parserInterval = 6 * 3600
     parserEnabled = True
-    parserDebug = True
+    parserDebug = False
 
     def perform(self):
         lat = globalSettings.location.latitude
