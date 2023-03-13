@@ -21,17 +21,18 @@ class Netatmo(RMParser):
     parserInterval = 6 * 3600
 
     refreshToken = None
-    clientID = None
-    clientSecret = None
     username = None
     password = None
 
-    params = { "username": ""
-              , "password": ""
-              , "useSpecifiedModules" : False
-              , "specificModules" : ''
-              , "_availableModules" : []
-              }
+    params = {
+        "username": ""
+        , "password": ""
+        , "clientID": ""
+        , "clientSecret": ""
+        , "useSpecifiedModules": False
+        , "specificModules": ''
+        , "_availableModules": []
+    }
 
     baseURL = "https://api.netatmo.com/"
     authReq = baseURL + "oauth2/token"
@@ -47,8 +48,8 @@ class Netatmo(RMParser):
 
     def perform(self):
 
-        self.clientSecret = ""
-        self.clientID = ""
+        self.clientSecret = self.params["clientSecret"]
+        self.clientID = self.params["clientID"]
 
         if self.username is None:
             self.username = self.params["username"]
