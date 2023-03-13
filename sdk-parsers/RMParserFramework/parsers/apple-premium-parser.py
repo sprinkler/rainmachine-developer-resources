@@ -6,6 +6,7 @@ from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
 from RMUtilsFramework.rmTimeUtils import *
 from RMDataFramework.rmUserSettings import globalSettings
+import urllib, urllib2
 import json
 
 class AppleWeatherKit(RMParser):
@@ -21,6 +22,7 @@ class AppleWeatherKit(RMParser):
     def perform(self):
         lat = globalSettings.location.latitude
         lon = globalSettings.location.longitude
+
         self.lastKnownError = ""
         URL = "https://weather.rainmachine.com/appleweather"
         try:
@@ -209,6 +211,38 @@ class AppleWeatherKit(RMParser):
             'Accept': 'application/json',
             'Authorization': "Bearer " + token
         })
+
+    def openURL(self, url, params = None, encodeParameters = True, headers = {}):
+        if params:
+            if encodeParameters:
+                query_string = urllib.urlencode(params)
+            else:
+                query_string = params
+
+            url = "?" . join([url, query_string])
+
+        log.debug("Parser '%s': downloading from %s" % (self.parserName, url))
+
+        try:
+            req = urllib2.Request(url=url, headers=headers)
+            res = urllib2.urlopen(url=req, timeout=60)
+            return res
+        except urllib2.HTTPError, e:
+            if e.code == 403:
+                self.lastKnownError = "Your account doesn't have a valid premium subscription."
+            elif e.code == 429:
+                self.lastKnownError = "Exceeded maximum daily requests calls."
+            elif e.code == 400:
+                self.lastKnownError = "Apple WeatherKit Server response error."
+            elif e.code == 401:
+                self.lastKnownError = "Apple WeatherKit Unauthorized. Please contact RainMachine Support"
+            else:
+                self.lastKnownError = "Retrying: URL open fail"
+        except Exception, e:
+            self.lastKnownError = "Retrying: URL open fail"
+
+        log.error(self.lastKnownError)
+        return None
 
 if __name__ == "__main__":
     parser = AppleWeatherKit()
