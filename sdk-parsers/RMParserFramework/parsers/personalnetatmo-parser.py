@@ -1,8 +1,4 @@
-# Copyright (c) 2015 RainMachine, Green Electronics LLC
-# All rights reserved.
-# Authors: Nicu Pavel <npavel@mini-box.com>
-#          Ciprian Misaila <ciprian.misaila@mini-box.com>
-
+# Copyright (c) 2023 RainMachine, Green Electronics LLC
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
 from RMUtilsFramework.rmTimeUtils import rmCurrentDayTimestamp
@@ -11,7 +7,6 @@ import urllib2, json, time, ssl
 from urllib import urlencode
 
 class PersonalNetatmo(RMParser):
-
     parserName = "PersonalNetatmo Parser"
     parserDescription = "Weather observations from NetAtmo personal weather station"
     parserForecast = False
@@ -43,7 +38,6 @@ class PersonalNetatmo(RMParser):
     accessTokenExpiration = 0
     accessToken = None
     refreshToken = None
-
     jsonData = None
 
     def perform(self):
@@ -64,8 +58,6 @@ class PersonalNetatmo(RMParser):
             self.username = self.params["username"]
             self.password = self.params["password"]
             self.clientOauth()
-
-        # Try to refresh the access token first if a previous one exists
         if self.accessToken is not None:
             self.renewAccesTokenIfNeeded()
 
@@ -79,28 +71,17 @@ class PersonalNetatmo(RMParser):
             return
 
         self.getData()
-
         tsStartOfDayUTC = rmCurrentDayTimestamp()
-
         if len(self.jsonData["body"]["devices"]) == 0:
              self.lastKnownError = "No NetAtmo devices found"
              log.error(self.lastKnownError)
              return
-
-        # Get available modules from returned json
         self.buildAvailableModules()
-
-        # Build the list of user specified modules
         specifiedModules = []
         if self.params["useSpecifiedModules"]:
             modulesString = self.params["specificModules"]
             specifiedModules = modulesString.split(',')
             specifiedModules = [item.strip() for item in specifiedModules]
-
-        # Only use the first reported device which should be user device if user didn't specify modules
-        # Otherwise we will have multiple reports that we need to collate data from multiple devices
-        # and multiple modules
-
         if self.params["useSpecifiedModules"]:
             for device in self.jsonData["body"]["devices"]:
                 self.getDeviceData(device, specifiedModules)
@@ -111,7 +92,6 @@ class PersonalNetatmo(RMParser):
         self.params["_availableModules"] = []
         for device in self.jsonData["body"]["devices"]:
             if "modules" not in device:
-                log.debug("Device doesn't have modules")
                 continue
 
             modules = device["modules"]
@@ -144,8 +124,6 @@ class PersonalNetatmo(RMParser):
         modules = device["modules"]
         minRH = 0
         maxRH = 0
-        # minPress = 0
-        # maxPress = 0
         maxTemp = 0
         minTemp = 0
         rain = 0
@@ -155,7 +133,6 @@ class PersonalNetatmo(RMParser):
         tsRain = None
         idxTemp = 0
         idxRH = 0
-        # idxPress = 0
         idxWind = 0
         idxRain = 0
         for module in modules:
@@ -210,10 +187,6 @@ class PersonalNetatmo(RMParser):
                         maxRH += recordedMaxRH
                         minRH += recordedMinRH
                         idxRH += 1
-                    # if(recordedMaxPress is not None and recordedMinPress is not None):
-                    #     maxPress += recordedMaxPress
-                    #     minPress += recordedMinPress
-                    #     idxPress += 1
                 except Exception, e:
                     log.error("Error reading temperature module: %s" % e)
 
@@ -224,9 +197,6 @@ class PersonalNetatmo(RMParser):
         if idxRH > 0 and tsTemp is not None:
             self.addValue(RMParser.dataType.MAXRH, tsTemp, maxRH/idxRH)
             self.addValue(RMParser.dataType.MINRH, tsTemp, minRH/idxRH)
-
-        # if idxPress > 0 and tsTemp is not None:
-        #     self.addValue(RMParser.dataType.PRESSURE, tsTemp, (maxPress + minPress)/(2*idxRH))
 
         if idxWind and tsWind is not None:
             self.addValue(RMParser.dataType.WIND, tsWind, wind/idxWind)
@@ -305,19 +275,10 @@ class PersonalNetatmo(RMParser):
         req = urllib2.Request(url=url, data=params, headers=headers)
 
         try:
-            log.info("Getting data from %s" % url)
             response = urllib2.urlopen(req)
-            log.debug("%s?%s" % (response.geturl(), params))
             return json.loads(response.read())
-        except urllib2.URLError, e:
-            log.debug(e)
-            if hasattr(ssl, '_create_unverified_context'): #for mac os only in order to ignore invalid certificates
-                try:
-                    context = ssl._create_unverified_context()
-                    response = urllib2.urlopen(req, context=context)
-                    return json.loads(response.read())
-                except Exception, e:
-                    log.exception(e)
+        except Exception, e:
+            log.exception(e)
         return None
 
 
@@ -342,7 +303,3 @@ class PersonalNetatmo(RMParser):
             return int(value)
         except:
             return None
-
-if __name__ == "__main__":
-    p = PersonalNetatmo()
-    p.perform()
