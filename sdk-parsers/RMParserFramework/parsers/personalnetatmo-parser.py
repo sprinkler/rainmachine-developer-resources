@@ -10,9 +10,9 @@ from RMParserFramework.rmParserManager import  RMParserManager
 import urllib2, json, time, ssl
 from urllib import urlencode
 
-class Netatmo(RMParser):
+class PersonalNetatmo(RMParser):
 
-    parserName = "Netatmo Parser"
+    parserName = "PersonalNetatmo Parser"
     parserDescription = "Weather observations from NetAtmo personal weather station"
     parserForecast = False
     parserHistorical = True
@@ -344,5 +344,5 @@ class Netatmo(RMParser):
             return None
 
 if __name__ == "__main__":
-    p = Netatmo()
+    p = PersonalNetatmo()
     p.perform()
