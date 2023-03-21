@@ -112,6 +112,13 @@
       "description": "Observed data from World-Wide Weather Stations Citizen Weather Observer Program",
       "instructions": ""
     },
+    "sdk-parsers/RMParserFramework/parsers/netatmo-parser.py": {
+      "version": "1.4",
+      "author": "RainMachine <apps@rainmachine.com>",
+      "name": "NetAtmo Parser",
+      "description": "Weather observations from NetAtmo personal weather station",
+      "instructions": "This weather service allows reading weather data from an NetAtmo application created in your account. You will need to add clientId, clientSecret, username and password. More details: https://dev.netatmo.com/guideline"
+    },
     "sdk-parsers/RMParserFramework/parsers/apple-premium-parser.py": {
       "version": "1.18",
       "author": "RainMachine <apps@rainmachine.com>",
