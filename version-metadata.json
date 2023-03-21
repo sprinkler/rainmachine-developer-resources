@@ -113,7 +113,7 @@
       "instructions": ""
     },
     "sdk-parsers/RMParserFramework/parsers/personalnetatmo-parser.py": {
-      "version": "1.4",
+      "version": "1.41",
       "author": "RainMachine <apps@rainmachine.com>",
       "name": "PersonalNetAtmo Parser",
       "description": "Weather observations from NetAtmo personal weather station",
