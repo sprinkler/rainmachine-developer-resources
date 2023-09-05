@@ -16,12 +16,10 @@ class PersonalNetatmo(RMParser):
     parserInterval = 6 * 3600
 
     refreshToken = None
-    username = None
-    password = None
 
     params = {
-        "username": ""
-        , "password": ""
+        "accessToken": ""
+        , "refreshToken": ""
         , "clientID": ""
         , "clientSecret": ""
         , "useSpecifiedModules": False
@@ -45,30 +43,19 @@ class PersonalNetatmo(RMParser):
         self.clientSecret = self.params["clientSecret"]
         self.clientID = self.params["clientID"]
 
-        if self.username is None:
-            self.username = self.params["username"]
-            self.password = self.params["password"]
-
-        if self.password is None or self.username is None:
-            self.lastKnownError = "Error: Invalid username or password."
-            log.error(self.lastKnownError)
-            return
-
-        if self.username != self.params["username"]:
-            self.username = self.params["username"]
-            self.password = self.params["password"]
-            self.clientOauth()
         if self.accessToken is not None:
             self.renewAccesTokenIfNeeded()
 
         if self.accessToken is None:
             log.info("Doing full auth")
-            self.clientOauth()
+            self.accessToken = self.params['accessToken']
+            self.refreshToken = self.params['refreshToken']
+            self.accessTokenExpiration = time.time() + 3600
 
-        if self.accessToken is None:
-            self.lastKnownError = "Error: Authentication failure"
-            log.error(self.lastKnownError)
-            return
+        # if self.accessToken is None:
+        #     self.lastKnownError = "Error: Authentication failure"
+        #     log.error(self.lastKnownError)
+        #     return
 
         self.getData()
         tsStartOfDayUTC = rmCurrentDayTimestamp()
@@ -213,8 +200,8 @@ class PersonalNetatmo(RMParser):
                     "client_secret" : self.clientSecret
                 }
                 response = self.postRequest(self.authReq, postParams)
-                self.accessToken = response['access_token']
-                self.refreshToken = response['refresh_token']
+                self.accessToken = self.params['accessToken'] =response['access_token']
+                self.refreshToken = self.params['refreshToken'] = response['refresh_token']
                 self.accessTokenExpiration = int(response['expire_in']) + time.time()
                 return True
         except:
@@ -224,26 +211,6 @@ class PersonalNetatmo(RMParser):
             self.accessTokenExpiration = 0
 
         return False
-
-    def clientOauth(self):
-        postParams = {
-            "grant_type" : "password",
-            "client_id" : self.clientID,
-            "client_secret" : self.clientSecret,
-            "username" : self.username,
-            "password" : self.password,
-            "scope" : "read_station"
-         }
-        try:
-            resp = self.postRequest(self.authReq, postParams)
-            self.accessToken = resp['access_token']
-            self.refreshToken = resp['refresh_token']
-            self.accessTokenExpiration = int(resp['expire_in']) + time.time()
-        except:
-            log.error("Failed to get oAuth token")
-            return False
-
-        return True
 
     def getData(self):
         postParams = {
