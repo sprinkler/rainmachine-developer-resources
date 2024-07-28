@@ -81,7 +81,7 @@ class NoaaObsParser(RMParser):
     parserDebug = False
     parserEnabled = False
     params = {
-        "_stationURL" : "https://w1.weather.gov/data/obhistory/KBDU.html",
+        "_stationURL" : "https://forecast.weather.gov/data/obhistory/KBDU.html",
         "stationID" : 'KBDU',
         "dailyAccum": True,
         "_lastRain" : '',
@@ -98,8 +98,8 @@ class NoaaObsParser(RMParser):
 
         
         #NOAA has a bunch of different feeds for the weather data, but only obhistory has rainfall
-        # A full listing of stations/urls can be found here: https://w1.weather.gov/xml/current_obs/index.xml
-        stationURL = "https://w1.weather.gov/data/obhistory/" + stationID + ".html"
+        # A full listing of stations/urls can be found here: https://forecast.weather.gov/xml/current_obs/index.xml
+        stationURL = "https://forecast.weather.gov/data/obhistory/" + stationID + ".html"
         self.params['_stationURL'] = stationURL
 
         # downloading data from a URL convenience function since other python libraries can be used
