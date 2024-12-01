@@ -199,7 +199,7 @@ class PersonalNetatmo(RMParser):
                     "client_id" : self.clientID,
                     "client_secret" : self.clientSecret
                 }
-                response = self.postRequest(self.authReq, postParams)
+                response = self.postRequest(self.authReq, postParams, True)
                 self.accessToken = self.params['accessToken'] =response['access_token']
                 self.refreshToken = self.params['refreshToken'] = response['refresh_token']
                 self.accessTokenExpiration = int(response['expire_in']) + time.time()
@@ -236,16 +236,36 @@ class PersonalNetatmo(RMParser):
             return None
 
 
-    def postRequest(self, url, params):
+    def postRequest(self, url, params, is_refresh_call=False):
         params = urlencode(params)
-        headers = {"Content-Type" : "application/x-www-form-urlencoded;charset=utf-8"}
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded;charset=utf-8"
+        }
+
+        # Add the Authorization header if not a token refresh call and accessToken is available
+        if not is_refresh_call and self.accessToken and self.accessToken.strip():
+            headers["Authorization"] = "Bearer {}".format(self.accessToken)
+        log.debug("POST request to %s with params %s and headers %s", url, params, headers)
         req = urllib2.Request(url=url, data=params, headers=headers)
 
         try:
             response = urllib2.urlopen(req)
             return json.loads(response.read())
+        except urllib2.HTTPError, e:
+            # Log detailed error information
+            log.error("HTTPError: %s - %s", e.code, e.reason)
+            try:
+                error_content = e.read()
+                log.error("HTTPError Content: %s", error_content)
+            except Exception as read_error:
+                log.error("Unable to read HTTPError content: %s", read_error)
+        except urllib2.URLError, e:
+            log.error("URLError: %s", e.reason)
+        except ValueError, e:
+            log.error("Invalid JSON response: %s", e)
         except Exception, e:
-            log.exception(e)
+            log.exception("Unexpected error during request: %s", e)
+
         return None
 
 
