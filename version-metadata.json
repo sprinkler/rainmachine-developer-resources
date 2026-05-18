@@ -130,8 +130,15 @@
       "version": "1.00",
       "author": "euphoriczzz <euphoriczzz@gmail.com>",
       "name": "OpenWeatherMap One Call 3.0 Parser",
-      "description": "Hourly (48h) and daily (8d) forecast via OWM One Call API 3.0",
+      "description": "Global weather service from https://openweathermap.org/",
       "instructions": "Requires activating 'One Call by Call' subscription at openweathermap.org. Enter your API key in the parser params."
+    },
+    "sdk-parsers/RMParserFramework/parsers/wunderground-v2-parser.py": {
+      "version": "1.00",
+      "author": "euphoriczzz <euphoriczzz@gmail.com>",
+      "name": "WUnderground V2 Parser",
+      "description": "Global weather service from https://preview.wunderground.com/",
+      "instructions": "Requires a PWS Ad Free subscription API key from weather.com. Enter your API key and PWS station ID (e.g. KROCHAR123) in the parser params. After the first run, check _nearbyStationsIDList for nearby station IDs."
     }
   }
 }
