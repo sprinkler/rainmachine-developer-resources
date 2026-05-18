@@ -125,6 +125,13 @@
       "name": "[Premium] Apple WeatherKit Parser",
       "description": "State of the art global weather forecast that provides hyperlocal weather information and best precipitation forecast. REQUIRES RAINMACHINE PREMIUM SERVICES SUBSCRIPTION.",
       "instructions": ""
+    },
+    "sdk-parsers/RMParserFramework/parsers/owm3-parser.py": {
+      "version": "1.00",
+      "author": "euphoriczzz <euphoriczzz@gmail.com>",
+      "name": "OpenWeatherMap One Call 3.0 Parser",
+      "description": "Hourly (48h) and daily (8d) forecast via OWM One Call API 3.0",
+      "instructions": "Requires activating 'One Call by Call' subscription at openweathermap.org. Enter your API key in the parser params."
     }
   }
 }
