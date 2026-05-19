@@ -4,3 +4,5 @@
 DB/
 ___PYC___
 *DS_Store
+.env
+sdk-parsers/*.json
