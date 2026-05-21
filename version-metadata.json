@@ -127,14 +127,14 @@
       "instructions": ""
     },
     "sdk-parsers/RMParserFramework/parsers/owm3-parser.py": {
-      "version": "1.01",
+      "version": "1.02",
       "author": "euphoriczzz <euphoriczzz@gmail.com>",
       "name": "OpenWeatherMap One Call 3.0 Parser",
       "description": "Global weather service from https://openweathermap.org/",
       "instructions": "Requires activating 'One Call by Call' subscription at openweathermap.org. Enter your API key in the parser params."
     },
     "sdk-parsers/RMParserFramework/parsers/wunderground-v2-parser.py": {
-      "version": "1.01",
+      "version": "1.02",
       "author": "euphoriczzz <euphoriczzz@gmail.com>",
       "name": "WUnderground V2 Parser",
       "description": "Global weather service from https://preview.wunderground.com/",
