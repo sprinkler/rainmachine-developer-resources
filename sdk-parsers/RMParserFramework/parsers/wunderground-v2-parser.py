@@ -178,16 +178,20 @@ class WUndergroundV2(RMParser):
                     pressure = (maxpressure + minpressure) / 2.0
 
                 if tsDay == tsYesterday:
-                    self.addValue(RMParser.dataType.TEMPERATURE, tsDay, temperature, False)
-                    self.addValue(RMParser.dataType.MINTEMP,     tsDay, mintemp,     False)
-                    self.addValue(RMParser.dataType.MAXTEMP,     tsDay, maxtemp,     False)
-                    self.addValue(RMParser.dataType.RH,          tsDay, rh,          False)
-                    self.addValue(RMParser.dataType.MINRH,       tsDay, minrh,       False)
-                    self.addValue(RMParser.dataType.MAXRH,       tsDay, maxrh,       False)
-                    self.addValue(RMParser.dataType.WIND,        tsDay, wind,        False)
-                    self.addValue(RMParser.dataType.RAIN,        tsDay, rain,        False)
-                    self.addValue(RMParser.dataType.DEWPOINT,    tsDay, dewpoint,    False)
-                    self.addValue(RMParser.dataType.PRESSURE,    tsDay, pressure,    False)
+                    solarRaw = self.__toFloat(m.get("solarRadiationHigh"))
+                    solar    = solarRaw * 0.0864 if solarRaw is not None else None  # W/m^2 -> MJ/m^2/day (peak reading used as daily proxy)
+
+                    self.addValue(RMParser.dataType.TEMPERATURE,    tsDay, temperature, False)
+                    self.addValue(RMParser.dataType.MINTEMP,        tsDay, mintemp,     False)
+                    self.addValue(RMParser.dataType.MAXTEMP,        tsDay, maxtemp,     False)
+                    self.addValue(RMParser.dataType.RH,             tsDay, rh,          False)
+                    self.addValue(RMParser.dataType.MINRH,          tsDay, minrh,       False)
+                    self.addValue(RMParser.dataType.MAXRH,          tsDay, maxrh,       False)
+                    self.addValue(RMParser.dataType.WIND,           tsDay, wind,        False)
+                    self.addValue(RMParser.dataType.RAIN,           tsDay, rain,        False)
+                    self.addValue(RMParser.dataType.DEWPOINT,       tsDay, dewpoint,    False)
+                    self.addValue(RMParser.dataType.PRESSURE,       tsDay, pressure,    False)
+                    self.addValue(RMParser.dataType.SOLARRADIATION, tsDay, solar,       False)
                     hasData = True
                 elif tsDay == tsToday:
                     # Today's RAIN only - avoids overwriting forecast data
@@ -237,9 +241,12 @@ class WUndergroundV2(RMParser):
             return
         dp = daypartList[0]
 
-        arrIconCode = dp.get("iconCode")         or []
-        arrRH       = dp.get("relativeHumidity") or []
-        arrWind     = dp.get("windSpeed")        or []
+        arrIconCode     = dp.get("iconCode")             or []
+        arrRH           = dp.get("relativeHumidity")     or []
+        arrWind         = dp.get("windSpeed")            or []
+        arrDewpoint     = dp.get("temperatureDewPoint")  or []
+        arrPrecipChance = dp.get("precipChance")         or []
+        arrCloudCover   = dp.get("cloudCover")           or []
 
         arrTS      = data.get("validTimeUtc")   or []
         arrMinTemp = data.get("temperatureMin") or []
@@ -267,6 +274,36 @@ class WUndergroundV2(RMParser):
             elif windNight is not None:
                 wind = windNight / 3.6
 
+            dewNight = self.__toFloat(arrDewpoint[ni] if ni < len(arrDewpoint) else None)
+            dewDay   = self.__toFloat(arrDewpoint[di] if di < len(arrDewpoint) else None)
+            dewpoint = None
+            if dewNight is not None and dewDay is not None:
+                dewpoint = (dewNight + dewDay) / 2.0
+            elif dewDay is not None:
+                dewpoint = dewDay
+            elif dewNight is not None:
+                dewpoint = dewNight
+
+            popNight = self.__toFloat(arrPrecipChance[ni] if ni < len(arrPrecipChance) else None)
+            popDay   = self.__toFloat(arrPrecipChance[di] if di < len(arrPrecipChance) else None)
+            pop = None
+            if popNight is not None and popDay is not None:
+                pop = max(popNight, popDay)
+            elif popDay is not None:
+                pop = popDay
+            elif popNight is not None:
+                pop = popNight
+
+            skyNight = self.__toFloat(arrCloudCover[ni] if ni < len(arrCloudCover) else None)
+            skyDay   = self.__toFloat(arrCloudCover[di] if di < len(arrCloudCover) else None)
+            skycover = None
+            if skyNight is not None and skyDay is not None:
+                skycover = (skyNight + skyDay) / 2.0
+            elif skyDay is not None:
+                skycover = skyDay
+            elif skyNight is not None:
+                skycover = skyNight
+
             iconCode  = arrIconCode[ni] if ni < len(arrIconCode) else None
             condition = self.__conditionConvert(iconCode)
 
@@ -277,6 +314,9 @@ class WUndergroundV2(RMParser):
             if wind      is not None: self.addValue(RMParser.dataType.WIND,      ts, wind,      False)
             if qpf       is not None: self.addValue(RMParser.dataType.QPF,       ts, qpf,       False)
             if condition is not None: self.addValue(RMParser.dataType.CONDITION, ts, condition, False)
+            if dewpoint  is not None: self.addValue(RMParser.dataType.DEWPOINT,  ts, dewpoint,  False)
+            if pop       is not None: self.addValue(RMParser.dataType.POP,       ts, pop,       False)
+            if skycover  is not None: self.addValue(RMParser.dataType.SKYCOVER,  ts, skycover,  False)
 
     def __conditionConvert(self, iconCode):
         if iconCode is None:
@@ -329,3 +369,30 @@ class WUndergroundV2(RMParser):
             return float(value)
         except:
             return None
+
+
+if __name__ == "__main__":
+    import os
+
+    class _Location(object):
+        latitude  = float(os.environ.get("RM_LAT",       "44.43"))
+        longitude = float(os.environ.get("RM_LON",       "26.10"))
+        elevation = float(os.environ.get("RM_ELEVATION",  "80.0"))
+
+    class _Settings(object):
+        location = _Location()
+
+    p = WUndergroundV2()
+    p.parserDebug = True
+    p.settings = _Settings()
+    p.params["apiKey"]    = os.environ.get("WU_API_KEY",    "")
+    p.params["stationId"] = os.environ.get("WU_STATION_ID", "")
+    p.perform()
+
+    print "\n--- WU V2 result: %d entries ---" % len(p.result)
+    for ts in sorted(p.result):
+        print p.result[ts]
+    if p.params.get("_nearbyStationsIDList"):
+        print "\nNearby stations:"
+        for st in p.params["_nearbyStationsIDList"]:
+            print "  " + st

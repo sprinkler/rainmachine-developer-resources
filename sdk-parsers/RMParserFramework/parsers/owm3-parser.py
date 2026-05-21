@@ -77,6 +77,8 @@ class OpenWeatherMapOneCall(RMParser):
             pressure = entry.get("pressure")
             wind     = entry.get("wind_speed")
             dewpoint = entry.get("dew_point")
+            skycover = entry.get("clouds")
+            pop      = entry.get("pop")
 
             rain = entry.get("rain") or {}
             qpf  = rain.get("1h", None)
@@ -89,9 +91,11 @@ class OpenWeatherMapOneCall(RMParser):
             except:
                 pressure = None
 
+            pop_pct = pop * 100 if pop is not None else None
+
             if self.parserDebug:
-                log.info("Hourly %s: temp=%s rh=%s wind=%s dewpoint=%s qpf=%s" % (
-                    rmTimestampToDateAsString(timestamp), temp, humidity, wind, dewpoint, qpf))
+                log.info("Hourly %s: temp=%s rh=%s wind=%s dewpoint=%s qpf=%s pop=%s sky=%s" % (
+                    rmTimestampToDateAsString(timestamp), temp, humidity, wind, dewpoint, qpf, pop_pct, skycover))
 
             self.addValue(RMParser.dataType.TEMPERATURE, timestamp, temp)
             self.addValue(RMParser.dataType.RH,          timestamp, humidity)
@@ -100,6 +104,8 @@ class OpenWeatherMapOneCall(RMParser):
             self.addValue(RMParser.dataType.DEWPOINT,    timestamp, dewpoint)
             self.addValue(RMParser.dataType.QPF,         timestamp, qpf)
             self.addValue(RMParser.dataType.CONDITION,   timestamp, condition)
+            self.addValue(RMParser.dataType.POP,         timestamp, pop_pct)
+            self.addValue(RMParser.dataType.SKYCOVER,    timestamp, skycover)
 
     def __parseDaily(self, daily):
         for entry in daily:
@@ -109,12 +115,38 @@ class OpenWeatherMapOneCall(RMParser):
             mintemp = temp.get("min", None)
             maxtemp = temp.get("max", None)
 
-            if self.parserDebug:
-                log.info("Daily %s: min=%s max=%s" % (
-                    rmTimestampToDateAsString(timestamp), mintemp, maxtemp))
+            humidity = entry.get("humidity")
+            wind     = entry.get("wind_speed")
+            dewpoint = entry.get("dew_point")
+            pressure = entry.get("pressure")
+            skycover = entry.get("clouds")
+            qpf      = entry.get("rain")  # plain float mm/day, not a dict
+            pop      = entry.get("pop")
 
-            self.addValue(RMParser.dataType.MINTEMP, timestamp, mintemp)
-            self.addValue(RMParser.dataType.MAXTEMP, timestamp, maxtemp)
+            weather   = entry.get("weather") or []
+            condition = self.conditionConvert(weather[0].get("id")) if weather else RMParser.conditionType.Unknown
+
+            try:
+                pressure = pressure / 10.0  # hPa -> kPa
+            except:
+                pressure = None
+
+            pop_pct = pop * 100 if pop is not None else None
+
+            if self.parserDebug:
+                log.info("Daily %s: min=%s max=%s rh=%s wind=%s dewpoint=%s qpf=%s pop=%s sky=%s" % (
+                    rmTimestampToDateAsString(timestamp), mintemp, maxtemp, humidity, wind, dewpoint, qpf, pop_pct, skycover))
+
+            self.addValue(RMParser.dataType.MINTEMP,   timestamp, mintemp)
+            self.addValue(RMParser.dataType.MAXTEMP,   timestamp, maxtemp)
+            self.addValue(RMParser.dataType.RH,        timestamp, humidity)
+            self.addValue(RMParser.dataType.WIND,      timestamp, wind)
+            self.addValue(RMParser.dataType.DEWPOINT,  timestamp, dewpoint)
+            self.addValue(RMParser.dataType.PRESSURE,  timestamp, pressure)
+            self.addValue(RMParser.dataType.CONDITION, timestamp, condition)
+            self.addValue(RMParser.dataType.SKYCOVER,  timestamp, skycover)
+            self.addValue(RMParser.dataType.QPF,       timestamp, qpf)
+            self.addValue(RMParser.dataType.POP,       timestamp, pop_pct)
 
     # https://openweathermap.org/weather-conditions
     def conditionConvert(self, id):
@@ -188,3 +220,25 @@ class OpenWeatherMapOneCall(RMParser):
             return RMParser.conditionType.IcePellets
 
         return RMParser.conditionType.Unknown
+
+
+if __name__ == "__main__":
+    import os
+
+    class _Location(object):
+        latitude  = float(os.environ.get("RM_LAT",       "44.43"))
+        longitude = float(os.environ.get("RM_LON",       "26.10"))
+        elevation = float(os.environ.get("RM_ELEVATION",  "80.0"))
+
+    class _Settings(object):
+        location = _Location()
+
+    p = OpenWeatherMapOneCall()
+    p.parserDebug = True
+    p.settings = _Settings()
+    p.params["apiKey"] = os.environ.get("OWM_API_KEY", "")
+    p.perform()
+
+    print "\n--- OWM3 result: %d entries ---" % len(p.result)
+    for ts in sorted(p.result):
+        print p.result[ts]
