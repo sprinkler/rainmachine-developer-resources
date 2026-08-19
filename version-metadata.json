@@ -46,7 +46,7 @@
       "version": "1.05",
       "author": "Pedro J. Pereira <pjpeartree@gmail.com>",
       "name": "Portuguese Weather Bureau",
-      "description": "Local forecasts in Portugal from the Instituto Português do Mar e da Atmosfera (IPMA)",
+      "description": "Local forecasts in Portugal from the Instituto Portugu\u00eas do Mar e da Atmosfera (IPMA)",
       "instructions": "https://github.com/pjpeartree/rainmachine-ipma"
     },
     "sdk-parsers/RMParserFramework/parsers/mesonet-parser.py": {
@@ -139,6 +139,13 @@
       "name": "WUnderground V2 Parser",
       "description": "Global weather service from https://preview.wunderground.com/",
       "instructions": "Requires a PWS Ad Free subscription API key from weather.com. Enter your API key and PWS station ID (e.g. KROCHAR123) in the parser params. After the first run, check _nearbyStationsIDList for nearby station IDs."
+    },
+    "sdk-parsers/RMParserFramework/parsers/wunderground-backup-parser.py": {
+      "version": "1.00",
+      "author": "lucaiuli <lucaiuli@gmail.com>",
+      "name": "WUnderground Backup",
+      "description": "Weather Underground PWS observations and forecast for controllers whose Python cannot send TLS SNI (HTTP 421).",
+      "instructions": "For controllers where the standard WUnderground parser fails with HTTP 421 Misdirected Request (Mini-8, Touch HD and other Python 2.7.3/2.7.8 firmware). Requires an API key from wunderground.com/member/api-keys and a registered PWS. Leave stationId empty to auto-select the nearest working station, or set it (uppercase, e.g. KCAPLEAS247) to choose your own."
     }
   }
 }

@@ -9,7 +9,278 @@ from RMUtilsFramework.rmTimeUtils import rmNowDateTime, rmGetStartOfDay, rmCurre
 from RMUtilsFramework.rmUtils import distanceBetweenGeographicCoordinatesAsKm
 from RMDataFramework.rmLimits import RMWeatherDataLimits
 from RMDataFramework.rmWeatherData import RMWeatherDataType
+import ctypes
 import json
+import os
+import socket
+import ssl
+import struct
+import sys
+import time
+import urllib
+import urllib2
+
+
+# ---------------------------------------------------------------------------
+# TLS SNI support for older controllers
+#
+# api.weather.com sits behind a CDN that requires TLS SNI: the hostname must
+# appear in the TLS ClientHello and match the HTTP Host header. Controllers on
+# Python 2.7.3 / 2.7.8 have an ssl module that cannot send SNI at all (support
+# arrived in 2.7.9 / PEP 466), so the edge serves its default certificate, sees
+# a Host it does not cover, and answers HTTP 421 Misdirected Request before the
+# API is ever reached. No API key or station setting can work around it.
+#
+# Shelling out to a downloader is not an option on that hardware: no curl, no
+# openssl binary, and BusyBox wget has no TLS. libssl.so IS present though, and
+# OpenSSL has supported SNI since 0.9.8f - only Python fails to expose it. So
+# the parser loads libssl through ctypes and calls SSL_set_tlsext_host_name(),
+# which is SSL_ctrl(ssl, 55, 0, host), before the handshake, exactly as curl
+# does. Measured on Mini-8 (2.7.3 / OpenSSL 1.0.1f) and Touch HD-16 (2.7.8 /
+# 1.0.1e): a URL that returns 421 through urllib2 returns a normal API reply
+# through this path. Controllers with a modern Python are unaffected - they
+# keep using urllib2 and only fall back to ctypes if that fails.
+#
+# The ctypes path does not verify certificates. Neither did the firmware it
+# exists for: 2.7.3's urllib2 never verified, and a 2014 CA bundle cannot
+# validate a current chain anyway.
+#
+# Everything below is additive: the parser's own request code is unchanged,
+# because openURL() is overridden to use this transport and still returns an
+# object with .read().
+# ---------------------------------------------------------------------------
+
+SSL_CTRL_SET_TLSEXT_HOSTNAME = 55   # openssl/ssl.h
+TLSEXT_NAMETYPE_host_name    = 0    # openssl/tls1.h
+SSL_RETRY_ERRORS = (2, 3, 5)        # WANT_READ, WANT_WRITE, SYSCALL
+
+# Absolute paths: ctypes.util.find_library() returns None on these images,
+# there is no ldconfig cache to consult.
+SSL_LIBS = ["/usr/lib/libssl.so.1.0.0", "/lib/libssl.so.1.0.0",
+            "/usr/lib/libssl.so.1.0.2", "/usr/lib/libssl.so.1.1",
+            "/usr/lib/libssl.so", "/system/lib/libssl.so",
+            "/system/lib64/libssl.so", "libssl.so.1.0.0", "libssl.so"]
+CRYPTO_LIBS = [p.replace("libssl", "libcrypto") for p in SSL_LIBS]
+
+
+class SNIError(Exception):
+    """The ctypes/libssl transport could not complete the request."""
+
+
+class SSLBinding(object):
+    """ctypes binding to the device's libssl, loaded once per process."""
+
+    _instance = None
+    _failed = False
+
+    @classmethod
+    def get(cls):
+        if cls._failed:
+            return None
+        if cls._instance is None:
+            try:
+                cls._instance = SSLBinding()
+            except Exception, e:
+                cls._failed = True
+                log.warning("WUnderground: libssl unavailable: %s" % e)
+                return None
+        return cls._instance
+
+    def __init__(self):
+        # libcrypto first and with RTLD_GLOBAL so libssl resolves against it.
+        self.crypto, _ = self.__load(CRYPTO_LIBS, True)
+        self.lib, self.path = self.__load(SSL_LIBS, False)
+
+        s = self.lib
+        vp, ci, cl, cc = ctypes.c_void_p, ctypes.c_int, ctypes.c_long, ctypes.c_char_p
+        self.method = getattr(s, "SSLv23_client_method", None) or s.TLS_client_method
+        self.method.restype = vp
+
+        for name, argtypes, restype in (
+                ("SSL_CTX_new",   [vp],             vp),
+                ("SSL_CTX_free",  [vp],             None),
+                ("SSL_new",       [vp],             vp),
+                ("SSL_free",      [vp],             None),
+                ("SSL_set_fd",    [vp, ci],         ci),
+                ("SSL_ctrl",      [vp, ci, cl, cc], cl),
+                ("SSL_connect",   [vp],             ci),
+                ("SSL_write",     [vp, cc, ci],     ci),
+                ("SSL_read",      [vp, cc, ci],     ci),
+                ("SSL_shutdown",  [vp],             ci),
+                ("SSL_get_error", [vp, ci],         ci)):
+            fn = getattr(s, name)
+            fn.argtypes = argtypes
+            if restype is not None:
+                fn.restype = restype
+
+        # Present in 1.0.x, gone in 1.1.x where initialisation is implicit.
+        for name in ("SSL_library_init", "SSL_load_error_strings"):
+            try:
+                getattr(s, name)()
+            except AttributeError:
+                pass
+
+    def __load(self, names, asGlobal):
+        lastError = None
+        for name in names:
+            if name.startswith("/") and not os.path.exists(name):
+                continue
+            try:
+                if asGlobal:
+                    return ctypes.CDLL(name, mode=ctypes.RTLD_GLOBAL), name
+                return ctypes.CDLL(name), name
+            except Exception, e:
+                lastError = e
+        raise SNIError(str(lastError))
+
+
+def dechunkBody(body):
+    """Decode a chunked transfer-encoded body."""
+    parts = []
+    while body:
+        newline = body.find("\r\n")
+        if newline < 0:
+            break
+        try:
+            size = int(body[:newline].split(";")[0].strip(), 16)
+        except ValueError:
+            break
+        if size == 0:
+            break
+        parts.append(body[newline + 2:newline + 2 + size])
+        body = body[newline + 2 + size + 2:]
+    return "".join(parts)
+
+
+def sniGet(url, timeout, agent):
+    """HTTPS GET with TLS SNI via libssl. Returns (status, body)."""
+    binding = SSLBinding.get()
+    if binding is None:
+        raise SNIError("libssl unavailable")
+
+    rest = url.split("://", 1)[1]
+    cut  = rest.find("/")
+    host = rest[:cut] if cut >= 0 else rest
+    path = rest[cut:] if cut >= 0 else "/"
+
+    sock = socket.create_connection((host, 443), timeout)
+    # create_connection leaves the socket non-blocking, which makes OpenSSL's
+    # blocking calls return WANT_READ immediately. Restore blocking mode and
+    # let the kernel enforce the timeout instead.
+    sock.setblocking(1)
+    try:
+        tv = struct.pack("ll", int(timeout), 0)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, tv)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDTIMEO, tv)
+    except Exception:
+        pass
+
+    s = binding.lib
+    ctx = conn = None
+    try:
+        ctx = s.SSL_CTX_new(binding.method())
+        if not ctx:
+            raise SNIError("SSL_CTX_new failed")
+        conn = s.SSL_new(ctx)
+        if not conn:
+            raise SNIError("SSL_new failed")
+        if s.SSL_set_fd(conn, sock.fileno()) != 1:
+            raise SNIError("SSL_set_fd failed")
+
+        # This single call is the entire point of the ctypes path.
+        if s.SSL_ctrl(conn, SSL_CTRL_SET_TLSEXT_HOSTNAME,
+                      TLSEXT_NAMETYPE_host_name, host) != 1:
+            raise SNIError("cannot set SNI hostname")
+
+        if s.SSL_connect(conn) != 1:
+            raise SNIError("handshake failed (err=%d)" % s.SSL_get_error(conn, -1))
+
+        # HTTP/1.1 - HTTP/1.0 draws 426 Upgrade Required from some edges.
+        request = ("GET %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: %s\r\n"
+                   "Accept: */*\r\nConnection: close\r\n\r\n" % (path, host, agent))
+        sent = 0
+        while sent < len(request):
+            n = s.SSL_write(conn, request[sent:], len(request) - sent)
+            if n <= 0:
+                raise SNIError("SSL_write failed")
+            sent += n
+
+        # SSL_read returning <= 0 does not necessarily mean end of stream. On
+        # slow hardware it is often WANT_READ, or SYSCALL raised by the
+        # SO_RCVTIMEO timer. Treating those as EOF truncates the body and
+        # yields invalid JSON, which makes refreshes fail at random.
+        chunks = []
+        buf = ctypes.create_string_buffer(16384)
+        deadline = time.time() + timeout
+        while True:
+            n = s.SSL_read(conn, buf, 16384)
+            if n > 0:
+                chunks.append(buf.raw[:n])
+                continue
+            if s.SSL_get_error(conn, n) in SSL_RETRY_ERRORS and time.time() < deadline:
+                time.sleep(0.1)
+                continue
+            break               # ZERO_RETURN, clean close, or a hard error
+        data = "".join(chunks)
+    finally:
+        try:
+            if conn:
+                s.SSL_shutdown(conn)
+                s.SSL_free(conn)
+            if ctx:
+                s.SSL_CTX_free(ctx)
+        except Exception:
+            pass
+        try:
+            sock.close()
+        except Exception:
+            pass
+
+    start = data.find("HTTP/1.")
+    if start < 0:
+        raise SNIError("no HTTP response")
+    data = data[start:]
+    try:
+        status = int(data.split(" ", 2)[1])
+    except Exception:
+        raise SNIError("bad status line")
+
+    sep = data.find("\r\n\r\n")
+    if sep < 0:
+        return status, ""
+    head = data[:sep].lower()
+    body = data[sep + 4:]
+
+    if "transfer-encoding: chunked" in head:
+        body = dechunkBody(body)
+    elif "content-length:" in head:
+        # Catch a short read here rather than handing a truncated body to
+        # json.loads(), so the caller reports the real problem.
+        try:
+            expected = int(head.split("content-length:")[1].split("\r\n")[0].strip())
+            if len(body) < expected:
+                raise SNIError("truncated body (%d of %d bytes)" % (len(body), expected))
+        except (ValueError, IndexError):
+            pass
+    return status, body
+
+
+class SNIResponse(object):
+    """Minimal file-like object so existing openURL() callers keep working."""
+
+    def __init__(self, data, status):
+        self.data = data
+        self.status = status
+
+    def read(self):
+        return self.data
+
+    def getcode(self):
+        return self.status
+
+    def close(self):
+        pass
+
 
 
 class WUnderground(RMParser):
@@ -38,6 +309,104 @@ class WUnderground(RMParser):
 
     apiURL = None
     jsonResponse = None
+
+    #-----------------------------------------------------------------------
+    # Transport
+    #
+    # openURL() is overridden so none of the request code below needs to
+    # change: it still receives an object with .read(). Controllers whose ssl
+    # module can send SNI keep using urllib2 and only fall back to ctypes if
+    # that fails; controllers without SNI go straight to the ctypes path,
+    # which is the only thing that reaches api.weather.com on that firmware.
+
+    agent = "RainMachine-WUnderground/1.0"
+    timeout = 60
+
+    _answered = False
+    _sniChecked = False
+    _sniAvailable = False
+
+    def hasNativeSNI(self):
+        if not WUnderground._sniChecked:
+            WUnderground._sniAvailable = (bool(getattr(ssl, "HAS_SNI", False))
+                                          and hasattr(ssl, "SSLContext"))
+            WUnderground._sniChecked = True
+        return WUnderground._sniAvailable
+
+    def __safeURL(self, url):
+        at = url.find("apiKey=")
+        return url if at < 0 else url[:at] + "apiKey=***"
+
+    def __viaUrllib(self, url, agent):
+        request = urllib2.Request(url, headers={"User-Agent": agent, "Accept": "*/*"})
+        try:
+            response = urllib2.urlopen(request, timeout=self.timeout)
+            return SNIResponse(response.read(), response.getcode())
+        except urllib2.HTTPError, e:
+            log.warning("WUnderground: HTTP %s from %s" % (e.code, self.__safeURL(url)))
+        except Exception, e:
+            log.warning("WUnderground: urllib2 failed: %s" % e)
+        return None
+
+    def __viaCtypes(self, url, agent):
+        # Embedded hardware drops the occasional handshake or read; one retry
+        # turns an intermittent failure into a successful refresh.
+        for attempt in (1, 2):
+            try:
+                status, body = sniGet(url, self.timeout, agent)
+            except socket.gaierror, e:
+                log.warning("WUnderground: cannot resolve host: %s" % e)
+                return None
+            except Exception, e:
+                if attempt == 1:
+                    time.sleep(1)
+                    continue
+                log.warning("WUnderground: libssl transport failed: %s" % e)
+                return None
+            if status != 200:
+                # A status code means the CDN and the API answered, so the
+                # SNI handshake worked and this result is definitive.
+                # Falling back to urllib2 would only produce a misleading
+                # 421 from a stack that cannot send SNI in the first place.
+                log.warning("WUnderground: HTTP %s from %s" % (status, self.__safeURL(url)))
+                self._answered = True
+                return None
+            return SNIResponse(body, status)
+        return None
+
+    def openURL(self, url, params = None, encodeParameters = True, headers = {}):
+        if params:
+            query = urllib.urlencode(params) if encodeParameters else params
+            url = "?" . join([url, query])
+
+        agent = headers.get("User-Agent", self.agent)
+        binding = SSLBinding.get()
+        log.debug("WUnderground: python=%s sni=%s libssl=%s url=%s"
+                  % (sys.version.split()[0],
+                     "yes" if self.hasNativeSNI() else "no",
+                     binding.path if binding else "none",
+                     self.__safeURL(url)))
+
+        self._answered = False
+        order = ([self.__viaUrllib, self.__viaCtypes] if self.hasNativeSNI()
+                 else [self.__viaCtypes, self.__viaUrllib])
+        for transport in order:
+            try:
+                response = transport(url, agent)
+            except Exception:
+                response = None
+            if response is not None:
+                return response
+            if self._answered:      # definitive HTTP status; do not retry
+                break
+
+        if not (self.hasNativeSNI() or SSLBinding.get() is not None):
+            self.lastKnownError = ("Error: no SNI-capable transport on this device - "
+                                   "cannot reach api.weather.com")
+        else:
+            self.lastKnownError = "Error: Can not open url"
+        log.error(self.lastKnownError)
+        return None
 
     def isEnabledForLocation(self, timezone, lat, long):
         return WUnderground.parserEnabled
@@ -68,7 +437,10 @@ class WUnderground(RMParser):
                 self.lastKnownError = "Warning: Use Nearby Stations is enabled but no station name specified."
                 log.error(self.lastKnownError)
             else:
-                self.arrStationNames = stationName.split(",")
+                # Blank entries are skipped. A stray comma leaves an empty
+                # name that the API answers with HTTP 400, and the settings UI
+                # does not always allow the field to be edited back.
+                self.arrStationNames = [n.strip() for n in stationName.split(",") if n.strip()]
                 for stationName in self.arrStationNames:
                     if noAPIKey:
                         hasStationData = self.getStationDataNoKey(stationName)
@@ -84,6 +456,9 @@ class WUnderground(RMParser):
                         self.lastKnownError = "Error: No observed data received from stations."
                     log.error(self.lastKnownError)
                 else:
+                    # A later success supersedes an earlier candidate's error;
+                    # without this the UI keeps showing the failed attempt.
+                    self.lastKnownError = ""
                     log.info("WUnderground: station data retrieved for %s" % stationName)
 
         if not hasForecastData and not noAPIKey:
