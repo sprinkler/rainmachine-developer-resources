@@ -167,7 +167,6 @@ class RMLoggerVolatile(RMLogger):
 #
 #
 globalLogger = RMLogger()
-globalLogger.setModuleDebugLevel('forecast-io-parser', logging.WARNING)
 globalLogger.setModuleDebugLevel('rmParserThread', logging.INFO)
 globalLogger.setModuleDebugLevel('rmCommandThread', logging.WARNING)
 globalLogger.setModuleDebugLevel('rmGPIOGenericLinux', logging.INFO)
