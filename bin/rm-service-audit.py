@@ -43,7 +43,7 @@ TARGETS = [
     ("noaa",        "https://forecast.rainmachine.com/xml/sample_products/browser_interface/ndfdXMLclient.php?token=px808345forc&lat=37.6&lon=-121.8&product=time-series&begin=2026-01-01&Unit=e&temp=temp", "RainMachine proxy #2"),
     ("noaa",        "https://graphical.weather.gov/xml/sample_products/browser_interface/ndfdXMLclient.php?lat=37.6&lon=-121.8&product=time-series&begin=2026-01-01&Unit=e&temp=temp", "NWS NDFD legacy XML, last fallback"),
     ("noaa (new)",  "https://api.weather.gov/points/37.6,-121.8", "not used by the parser - the modern replacement"),
-    ("netatmo",     "https://api.netatmo.com/oauth2/token", "expect 400/405 without a body - proves reachability"),
+    ("netatmo",     "https://api.netatmo.com/oauth2/token", "expect 400/405 without a body - proves reachability. If the built-in parser cannot complete TLS, check what it actually calls: strings /rainmachine-app/RMParserFramework/parsers/netatmo-parser.pyc | grep -iE 'http|grant_type|oauth'"),
     ("owm",         "https://api.openweathermap.org/data/2.5/forecast?lat=37.6&lon=-121.8", "expect 401 without appid"),
     ("forecast-io", "https://api.darksky.net/forecast/0/37.6,-121.8", "Dark Sky"),
     ("met-no",      "https://api.met.no/weatherapi/locationforecast/2.0/classic?lat=37.6&lon=-121.8", "check UA policy"),
