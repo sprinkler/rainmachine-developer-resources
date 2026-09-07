@@ -1,483 +1,450 @@
-# Copyright (c) 2014 RainMachine, Green Electronics LLC
-# All rights reserved.
-# Authors: Nicu Pavel <npavel@mini-box.com>
-#          Codrin Juravle <codrin.juravle@mini-box.com>
-
-
 from RMParserFramework.rmParser import RMParser
 from RMUtilsFramework.rmLogging import log
-from RMDataFramework.rmWeatherData import RMWeatherConditions
 from RMDataFramework.rmUserSettings import globalSettings
 from RMUtilsFramework.rmTimeUtils import *
-from RMUtilsFramework.rmUtils import convertKnotsToMS, convertFahrenheitToCelsius, convertInchesToMM, convertToFloat, convertToInt
-from RMDataFramework.rmLimits import RMWeatherDataLimits
-from RMDataFramework.rmWeatherData import RMWeatherDataType
-
-import datetime, time
-from xml.etree import ElementTree as e
-
-
+import ctypes
+import json
+import math
+import os
+import socket
+import struct
+import time
+import urllib
+dt=RMParser.dataType
+ct=RMParser.conditionType
+cT=rmCurrentDayTimestamp
+gD=rmGetStartOfDay
+fT=rmTimestampFromDateAsStringWithOffset
+gS=globalSettings
+SSL_LIBS=[d+"libssl.so"+v for d in("/usr/lib/","/lib/","/usr/lib64/","/system/lib64/","/system/lib/","")for v in(".1.0.0",".1.0.2",".1.1",".3",".10","")]
+CRYPTO_LIBS = [p.replace("libssl", "libcrypto") for p in SSL_LIBS]
+class SNIError(Exception): pass
+class SSLBinding(object):
+ _instance = None
+ _failed = False
+ @classmethod
+ def get(cls):
+  if cls._failed:
+   return None
+  if cls._instance is None:
+   try:
+    cls._instance = SSLBinding()
+   except Exception, e:
+    cls._failed = True
+    log.warning("NOAA: libssl unavailable: %s" % e)
+    return None
+  return cls._instance
+ def __init__(self):
+  self.crypto, _ = self.__load(CRYPTO_LIBS, True)
+  self.lib, self.path = self.__load(SSL_LIBS, False)
+  s = self.lib
+  vp, ci, cl, cc = ctypes.c_void_p, ctypes.c_int, ctypes.c_long, ctypes.c_char_p
+  self.method = getattr(s, "SSLv23_client_method", None) or s.TLS_client_method
+  self.method.restype = vp
+  for name, argtypes, restype in (
+    ("SSL_CTX_new",   [vp],             vp),
+    ("SSL_CTX_free",  [vp],             None),
+    ("SSL_new",       [vp],             vp),
+    ("SSL_free",      [vp],             None),
+    ("SSL_set_fd",    [vp, ci],         ci),
+    ("SSL_ctrl",      [vp, ci, cl, cc], cl),
+    ("SSL_connect",   [vp],             ci),
+    ("SSL_write",     [vp, cc, ci],     ci),
+    ("SSL_read",      [vp, cc, ci],     ci),
+    ("SSL_shutdown",  [vp],             ci),
+    ("SSL_get_error", [vp, ci],         ci)):
+   fn = getattr(s, name)
+   fn.argtypes = argtypes
+   if restype is not None:
+    fn.restype = restype
+  log.info("NOAA: libssl @ %s" % self.path)
+  for name in ("SSL_library_init", "SSL_load_error_strings"):
+   try:
+    getattr(s, name)()
+   except AttributeError:
+    pass
+ def __load(self, names, asGlobal):
+  lastError = None
+  for name in names:
+   if name.startswith("/") and not os.path.exists(name):
+    continue
+   try:
+    if asGlobal:
+     return ctypes.CDLL(name, mode=ctypes.RTLD_GLOBAL), name
+    return ctypes.CDLL(name), name
+   except Exception, e:
+    lastError = e
+  raise SNIError(str(lastError))
+def dechunkBody(body):
+ parts = []
+ while body:
+  newline = body.find("\r\n")
+  if newline < 0:
+   break
+  try:
+   size = int(body[:newline].split(";")[0].strip(), 16)
+  except ValueError:
+   break
+  if size == 0:
+   break
+  parts.append(body[newline + 2:newline + 2 + size])
+  body = body[newline + 2 + size + 2:]
+ return "".join(parts)
+def sniGet(url, timeout, agent, extraHeaders=None):
+ binding = SSLBinding.get()
+ if binding is None:
+  raise SNIError("libssl unavailable")
+ rest = url.split("://", 1)[1]
+ cut  = rest.find("/")
+ host = rest[:cut] if cut >= 0 else rest
+ path = rest[cut:] if cut >= 0 else "/"
+ sock = socket.create_connection((host, 443), timeout)
+ sock.setblocking(1)
+ try:
+  tv = struct.pack("ll", int(timeout), 0)
+  sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, tv)
+  sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDTIMEO, tv)
+ except Exception:
+  pass
+ s = binding.lib
+ ctx = conn = None
+ try:
+  ctx = s.SSL_CTX_new(binding.method())
+  if not ctx:
+   raise SNIError("SSL_CTX_new failed")
+  conn = s.SSL_new(ctx)
+  if not conn:
+   raise SNIError("SSL_new failed")
+  if s.SSL_set_fd(conn, sock.fileno()) != 1:
+   raise SNIError("SSL_set_fd failed")
+  if s.SSL_ctrl(conn, 55, 0, host) != 1:
+   raise SNIError("cannot set SNI hostname")
+  if s.SSL_connect(conn) != 1:
+   raise SNIError("handshake failed (err=%d)" % s.SSL_get_error(conn, -1))
+  headers = {"Host": host, "User-Agent": agent,
+    "Accept": "application/geo+json", "Connection": "close"}
+  if extraHeaders:
+   for k, v in extraHeaders.items():
+    headers[k] = v
+  request = "GET %s HTTP/1.1\r\n" % path
+  for k, v in headers.items():
+   request += "%s: %s\r\n" % (k, v)
+  request += "\r\n"
+  sent = 0
+  while sent < len(request):
+   n = s.SSL_write(conn, request[sent:], len(request) - sent)
+   if n <= 0:
+    raise SNIError("SSL_write failed")
+   sent += n
+  chunks = []
+  buf = ctypes.create_string_buffer(16384)
+  deadline = time.time() + timeout
+  while True:
+   n = s.SSL_read(conn, buf, 16384)
+   if n > 0:
+    chunks.append(buf.raw[:n])
+    continue
+   if s.SSL_get_error(conn, n) in (2,3,5) and time.time() < deadline:
+    time.sleep(0.1)
+    continue
+   break
+  data = "".join(chunks)
+ finally:
+  try:
+   if conn:
+    s.SSL_shutdown(conn)
+    s.SSL_free(conn)
+   if ctx:
+    s.SSL_CTX_free(ctx)
+  except Exception:
+   pass
+  try:
+   sock.close()
+  except Exception:
+   pass
+ start = data.find("HTTP/1.")
+ if start < 0:
+  raise SNIError("no HTTP response")
+ data = data[start:]
+ try:
+  status = int(data.split(" ", 2)[1])
+ except Exception:
+  raise SNIError("bad status line")
+ sep = data.find("\r\n\r\n")
+ if sep < 0:
+  return status, ""
+ head = data[:sep].lower().replace(" ", "")
+ body = data[sep + 4:]
+ if "transfer-encoding:chunked" in head:
+  body = dechunkBody(body)
+ if body.lstrip()[:1] not in ("{", "["):
+  body = dechunkBody(body)
+ return status, body
+class SNIResponse(object):
+ def __init__(self, data, status):
+  self.data = data
+ def read(self):
+  return self.data
 class NOAA(RMParser):
-    parserName = "NOAA Parser"
-    parserDescription = "North America weather forecast from National Oceanic and Atmospheric Administration"
-    parserForecast = True
-    parserHistorical = False
-    parserEnabled = True
-    parserDebug = False
-    parserInterval = 6 * 3600
-    params = {}
-
-    skippedDays = {} # keep track of incomplete days
-    intervalsCache = {} # keep track of intervals in the current day
-
-    def isEnabledForLocation(self, timezone, lat, long):
-        if NOAA.parserEnabled and timezone:
-            return timezone.startswith("America") or timezone.startswith("US")
-        return False
-
-    def perform(self):
-        s = self.settings
-
-        # Order is important
-        urls = [
-            {
-                "host": "https://noaa.rainmachine.com",
-                "headers": {"Host": "graphical.weather.gov"},
-                "params": []
-            },
-            {
-                "host": "https://noaa.rainmachine.com",
-                "headers": {"Host": "graphical.weather.gov"},
-                "params": []
-            },
-            {
-                "host": "https://forecast.rainmachine.com",
-                "headers": {},
-                "params": [("token", "px808345forc")]
-            },
-            {
-                "host": "https://graphical.weather.gov",
-                "headers": {},
-                "params": []
-            },
-        ]
-
-        hourlyPath = "/xml/sample_products/browser_interface/ndfdXMLclient.php"
-        dailyPath = "/xml/sample_products/browser_interface/ndfdBrowserClientByDay.php"
-
-        baseParams = [
-           ("lat", s.location.latitude),
-           ("lon", s.location.longitude)
-        ]
-
-        # baseParams = [
-        #    ("lat", "27"),
-        #    ("lon", "-80")
-        # ]
-
-        hourlyParams = [
-            ("product", "time-series"),
-            ("begin", datetime.date.today().strftime("%Y-%m-%d")),
-            ("Unit", "e"),
-            ("maxt", "maxt"),
-            ("mint", "mint"),
-            ("temp", "temp"),
-            ("qpf", "qpf"),
-            ("dew", "dew"),
-            ("pop12", "pop12"),
-            ("wspd", "wspd"),
-            ("rh", "rh"),
-            ("maxrh", "maxrh"),
-            ("minrh", "minrh")
-        ]
-
-        dailyParams = [
-            ("startDate", datetime.date.today().strftime("%Y-%m-%d")),
-            #("endDate", (datetime.date.today() + datetime.timedelta(6)).strftime("%Y-%m-%d")),
-            ("format", "24 hourly"),
-            ("numDays", 6),
-            ("Unit", "e")
-        ]
-
-        baseHeaders = {"User-Agent": "RainMachine v2"}
-
-        hasHourly = False
-        hasDaily = False
-
-        for url in urls:
-            hourlyURL = url["host"] + hourlyPath
-            dailyUrl = url["host"] + dailyPath
-            urlHourlyParams = baseParams + hourlyParams + url["params"]
-            urlDailyParams = baseParams + dailyParams + url["params"]
-            url["headers"].update(baseHeaders)
-
-            if not hasHourly:
-                log.info("Fetching Hourly data from %s" % hourlyURL)
-                hasHourly = self.getHourlyData(hourlyURL, urlHourlyParams, url["headers"])
-
-            if not hasDaily:
-                log.info("Fetching Daily data from %s " % dailyUrl)
-                hasDaily = self.getDailyData(dailyUrl, urlDailyParams, url["headers"])
-
-            if hasHourly and hasDaily:
-                break
-
-        # If we didn't get Hourly data we consider a fail and retry the whole parser operation.
-        # We remove any values obtained by daily call so we can trigger parser retry
-        if not hasHourly:
-            self.clearValues()
-
-        if self.parserDebug:
-            log.debug(self.result)
-
-        self.skippedDays = {}
-
-        # Dump existing cache for today
-        if self.parserDebug:
-            todayTimestamp = rmCurrentDayTimestamp()
-            for cacheKey in self.intervalsCache:
-                log.info("%s CACHED %s:" % (rmTimestampToDateAsString(todayTimestamp), cacheKey))
-                if todayTimestamp in self.intervalsCache[cacheKey]:
-                    for entry in self.intervalsCache[cacheKey][todayTimestamp]:
-                        v = self.intervalsCache[cacheKey][todayTimestamp][entry]
-                        log.info("\t %s: %s" % (rmTimestampToDateAsString(entry), v))
-
-
-    #-----------------------------------------------------------------------------------------------
-    #
-    # Get hourly data.
-    #
-    def getHourlyData(self, URL, URLParams, headers):
-
-        d = self.openURL(URL, URLParams, headers=headers)
-        if d is None:
-            return False
-        try:
-            tree = e.parse(d)
-        except:
-            return False
-
-        #tree = e.parse("/tmp/noaa-fl-2019-06-04-1.xml")
-
-        if tree.getroot().tag == 'error':
-            log.error("*** No hourly information found in response!")
-            self.lastKnownError = "Retrying hourly data retrieval"
-            tree.getroot().clear()
-            del tree
-            tree = None
-            return False
-
-        # Reset lastKnownError from a previous function call
-        self.lastKnownError = ""
-
-        # We get them in English units need in Metric units
-
-        # 2019-06-01: If we send that weather properties we want (qpf=qpf&mint=mint) in request URL NOAA response forgets
-        # past hours in current day resulting in a forecast requested at the end of the day
-        # having null/0 qpf forgetting the older values which could had more qpf so we need to process QPF first and
-        # determine which entries don't have full days with qpf reported (especially current day) then completely skip
-        # this day for the rest of the weather properties so we don't have a forecast entry with null/0 qpf
-
-        # Algorithm allows multiple partial days to be skipped because incomplete but we currently only skip today
-
-        # QPF needs to be the first tag parsed to build the skippedDays structure
-        qpf = self.__parseWeatherTag(tree, 'precipitation', 'liquid', skippedDays=self.skippedDays, addToSkippedDays=True)
-        qpf = convertInchesToMM(qpf)
-
-        maxt = self.__parseWeatherTag(tree, 'temperature', 'maximum', skippedDays=self.skippedDays)
-        maxt = convertFahrenheitToCelsius(maxt)
-
-        mint = self.__parseWeatherTag(tree, 'temperature', 'minimum', useStartTimes=False, skippedDays=self.skippedDays) # for mint we want the end-time to be saved in DB
-        mint = convertFahrenheitToCelsius(mint)
-
-        temp = self.__parseWeatherTag(tree, 'temperature', 'hourly', skippedDays=self.skippedDays)
-        temp = convertFahrenheitToCelsius(temp)
-
-        dew = self.__parseWeatherTag(tree, 'temperature', 'dew point', skippedDays=self.skippedDays)
-        dew = convertFahrenheitToCelsius(dew)
-
-        wind = self.__parseWeatherTag(tree, 'wind-speed', 'sustained', skippedDays=self.skippedDays)
-        wind = convertKnotsToMS(wind)
-
-        # These are as percentages
-        pop = self.__parseWeatherTag(tree, 'probability-of-precipitation', '12 hour', skippedDays=self.skippedDays)
-        pop = convertToInt(pop)
-
-        humidity = self.__parseWeatherTag(tree, 'humidity', 'relative', skippedDays=self.skippedDays)
-        humidity = convertToFloat(humidity)
-
-        minHumidity = self.__parseWeatherTag(tree, 'humidity', 'minimum relative', skippedDays=self.skippedDays)
-        minHumidity = convertToFloat(minHumidity)
-
-        maxHumidity = self.__parseWeatherTag(tree, 'humidity', 'maximum relative', skippedDays=self.skippedDays)
-        maxHumidity = convertToFloat(maxHumidity)
-
-        if self.parserDebug:
-            tree.write('noaa-' + str(rmTimestampToDateAsString(rmCurrentTimestamp())) + ".xml")
-
-        tree.getroot().clear()
-        del tree
-        tree = None
-
-        # Save
-        self.addValues(RMParser.dataType.MINTEMP, mint)
-        self.addValues(RMParser.dataType.MAXTEMP, maxt)
-        self.addValues(RMParser.dataType.TEMPERATURE, temp)
-        self.addValues(RMParser.dataType.QPF, qpf)
-        self.addValues(RMParser.dataType.DEWPOINT, dew)
-        self.addValues(RMParser.dataType.WIND, wind)
-        self.addValues(RMParser.dataType.POP, pop)
-        self.addValues(RMParser.dataType.RH, humidity)
-        self.addValues(RMParser.dataType.MINRH, minHumidity)
-        self.addValues(RMParser.dataType.MAXRH, maxHumidity)
-
-        return True
-
-    #-----------------------------------------------------------------------------------------------
-    #
-    # Get daily data.
-    #
-    def getDailyData(self, URLDaily, URLParams, headers):
-        d = self.openURL(URLDaily, URLParams, headers=headers)
-        try:
-            tree = e.parse(d)
-        except:
-            return False
-
-        if tree.getroot().tag == 'error':
-            log.error("*** No daily information found in response!")
-            self.lastKnownError = "Retrying daily brief"
-            tree.getroot().clear()
-            del tree
-            tree = None
-            return False
-
-        #tree = e.parse("/tmp/noaa-fl-2019-06-04-daily-1.xml")
-
-        # Reset lastKnownError from a previous function call
-        self.lastKnownError = ""
-
-        conditions = self.__parseWeatherTag(tree, 'conditions-icon', 'forecast-NWS', 'icon-link', skippedDays=self.skippedDays)
-        parsedConditions = []
-
-        for c in conditions:
-            if c and len(c) >= 2:
-                try:
-                    cv = self.conditionConvert(c[1].rsplit('.')[-2].rsplit('/')[-1])
-                except:
-                    cv = RMWeatherConditions.Unknown
-
-                parsedConditions.append((c[0], cv))
-
-        tree.getroot().clear()
-        del tree
-        tree = None
-
-        self.addValues(RMParser.dataType.CONDITION, parsedConditions)
-
-        return True
-
-
-    def __parseDateTime(self, str, roundToHour = True):
-        #NOAA reports in location local time needs UTC conversion
-        timestamp = rmTimestampFromDateAsStringWithOffset(str)
-        if timestamp is None:
-            return None
-
-        if roundToHour:
-            return timestamp - (timestamp % 3600)
-        else:
-            return timestamp
-
-    def __parseTimeLayout(self, tree, key, useStartTimes = True):
-        found = False
-        validDates = []
-
-        # We can index by using "start-valid-time" or by "end-valid-time"
-        if useStartTimes:
-            dateTagName =  "start-valid-time"
-        else:
-            dateTagName =  "end-valid-time"
-
-        for timeElement in tree.getroot().getiterator(tag = "time-layout"):
-            for timeData in timeElement.getchildren():
-                if timeData.tag == "layout-key" and timeData.text == key:
-                    found = True
-                elif timeData.tag == dateTagName and found:
-                    validDates.append(self.__parseDateTime(timeData.text))
-
-            if found:
-                break
-
-
-        return validDates
-
-    # skippedDays will hold the days skipped by other entries (qpf, temp).
-    def __parseWeatherTag(self, tree, tag, type, subtag = "value", useStartTimes = True, typeConvert = None, skippedDays = {}, addToSkippedDays = False):
-        values = []
-        forecastTimes = []
-        timeLayoutKey = None
-        cacheKey = tag + type
-
-        todayTimestamp = rmCurrentDayTimestamp()
-        maxDayTimestamp = todayTimestamp + globalSettings.parserDataSizeInDays * 86400
-
-        # We start a new current day
-        if cacheKey not in self.intervalsCache or todayTimestamp not in self.intervalsCache[cacheKey]:
-            self.intervalsCache[cacheKey] = {} # forget older days
-            self.intervalsCache[cacheKey][todayTimestamp] = {}
-
-        # Build forecast time intervals list and values list
-        for w in tree.getroot().getiterator(tag = tag):
-            if w.attrib['type'] != type:
-                continue
-
-            timeLayoutKey = w.attrib['time-layout']
-            forecastTimes = self.__parseTimeLayout(tree, timeLayoutKey, useStartTimes=useStartTimes)
-
-            for wval in w.getiterator(tag = subtag):
-                try:
-                    val = wval.text
-                    if typeConvert == 'int':
-                        val = int(val)
-                    if typeConvert == 'float':
-                        val = float(val)
-                except:
-                    val = None
-
-                values.append(val)
-
-        result = zip(forecastTimes, values)
-        result.sort(key=lambda z: z[0]) # Sort by timestamp
-
-        # If we don't have 'precipitation' for a full 'today' skip all weather properties for today unless we have something cached
-        # Otherwise allow partial day weather properties to be saved even if we don't have a cache of them
-        # In other words: If we have full 'today' precipitation allow other partial entries if not forget entire day
-        tmpresult = []
-        lastDay = None
-        skipDay = None
-
-        for z in result:
-            day = rmGetStartOfDay(z[0])
-            if day in skippedDays:
-                log.debug("%s %s day %s in skippedDays skipping" % (tag, type, rmTimestampToDateAsString(day)))
-                continue
-
-            startDate = rmTimestampToDate(z[0])
-            startHour = startDate.hour
-
-            if todayTimestamp > z[0]:
-                log.info("%s %s: reject date %s as it's in the past" % (tag, type, rmTimestampToDateAsString(z[0])))
-                continue
-
-            if z[0] >= maxDayTimestamp:
-                log.debug("%s %s: reject date %s as it's over the max parser day: %s" % (tag, type, rmTimestampToDateAsString(z[0]), rmTimestampToDateAsString(maxDayTimestamp)))
-                continue
-
-            # Check for incomplete days
-            if lastDay is None or lastDay < day:
-                skipDay = None
-                lastDay = day
-                log.debug("%s %s: found new day: %s - %s" % (tag, type, rmTimestampToDateAsString(day), rmTimestampToDateAsString(lastDay)))
-                # Is this a day with partial data not starting at the beginning of day ?
-                if startHour > 10:
-                    if day == todayTimestamp: # Limit to today
-                        if not self.intervalsCache[cacheKey][todayTimestamp]: # Only if no cache
-                            skipDay = day
-
-            # Build skippedDays list
-            # Save to skipped days so we can skip for all other weather propeties that will be parsed after
-            if day == skipDay:
-                # Allow adding partial entries if they aren't already in skippedDays for entries have addToSkippedDays = False
-                if addToSkippedDays:
-                    skippedDays[skipDay] = True
-                    log.info("\t%s %s day: %s starting with hour %s (local) skipping with addToSkippedDays..." % (tag, type, rmTimestampToDateAsString(day), startHour))
-                    continue
-
-            # Cache: Update with new value. Older intervals that aren't in current result have their cached values
-            if day == todayTimestamp:
-                self.intervalsCache[cacheKey][todayTimestamp][z[0]] = z[1]
-                log.debug("%s Added interval head %s cache with value: %s" % (cacheKey, rmTimestampToDateAsString(z[0]), z[1]))
-
-            if self.parserDebug:
-                log.info("Adding %s: %s for %s" % (cacheKey, z[1], rmTimestampToDateAsString(z[0])))
-            tmpresult.append(z)
-
-
-        # Cache: Add cache entries that don't exist to the tmpresult
-        # This way we will still have in latest forecastID the data that was retrieved by other parsers runs
-        # on this day
-        for entry in self.intervalsCache[cacheKey][todayTimestamp]:
-            alreadyIn = False
-            for z in tmpresult:
-                if entry == z[0]:
-                    alreadyIn = True
-                    break
-            if not alreadyIn:
-                v = self.intervalsCache[cacheKey][todayTimestamp][entry]
-                log.debug("Adding from Cache: %s: %s for %s" % (cacheKey, v, rmTimestampToDateAsString(entry)))
-                tmpresult.append((entry, v))
-
-        return tmpresult
-
-
-    def conditionConvert(self, conditionStr):
-        if 'bkn' in conditionStr:
-            return RMParser.conditionType.MostlyCloudy
-        elif 'skc' in conditionStr:
-            return RMParser.conditionType.Fair
-        elif 'few' in conditionStr:
-            return RMParser.conditionType.FewClouds
-        elif 'sct' in conditionStr:
-            return RMParser.conditionType.PartlyCloudy
-        elif 'ovc' in conditionStr:
-            return RMParser.conditionType.Overcast
-        elif 'fg' in conditionStr:
-            return  RMParser.conditionType.Fog
-        elif 'smoke' in conditionStr:
-            return  RMParser.conditionType.Smoke
-        elif 'fzra' in conditionStr:
-            return  RMParser.conditionType.HeavyFreezingRain
-        elif 'ip' in conditionStr:
-            return  RMParser.conditionType.IcePellets
-        elif 'mix' in conditionStr:
-            return  RMParser.conditionType.FreezingRain
-        elif 'raip' in conditionStr:
-            return  RMParser.conditionType.RainIce
-        elif 'rasn' in conditionStr:
-            return  RMParser.conditionType.RainSnow
-        elif 'shra' in conditionStr:
-            return  RMParser.conditionType.RainShowers
-        elif 'tsra' in conditionStr:
-            return  RMParser.conditionType.Thunderstorm
-        elif 'sn' in conditionStr:
-            return  RMParser.conditionType.Snow
-        elif 'wind' in conditionStr:
-            return  RMParser.conditionType.Windy
-        elif 'shwrs' in conditionStr:
-            return  RMParser.conditionType.ShowersInVicinity
-        elif 'fzrara' in conditionStr:
-            return  RMParser.conditionType.HeavyFreezingRain
-        elif 'hi_tsra' in conditionStr:
-            return  RMParser.conditionType.ThunderstormInVicinity
-        elif 'ra1' in conditionStr:
-            return  RMParser.conditionType.LightRain
-        elif 'ra' in conditionStr:
-            return  RMParser.conditionType.HeavyRain
-        elif 'nsvrtsra' in conditionStr:
-            return  RMParser.conditionType.FunnelCloud
-        elif 'dust' in conditionStr:
-            return  RMParser.conditionType.Dust
-        elif 'mist' in conditionStr:
-            return  RMParser.conditionType.Haze
-        elif 'hot' in conditionStr:
-            return  RMParser.conditionType.Hot
-        elif 'cold' in conditionStr:
-            return  RMParser.conditionType.Cold
-        else:
-            return  RMParser.conditionType.Unknown
-
-
-if __name__ == "__main__":
-    parser = NOAA()
-    parser.perform()
+ parserName = "NOAA (fix)"
+ parserDescription = "NOAA api.weather.gov forecast"
+ parserForecast = True
+ parserHistorical = False
+ parserEnabled = True
+ parserInterval = 6 * 3600
+ params = {"useObservations": True, "selectedStation": None, "recommendedMiles": 22, "_stations": []}
+ defaultParams = dict(params)
+ agent = "RainMachine v2"
+ timeout = 60
+ def __viaCtypes(self, url, headers):
+  for attempt in (1, 2):
+   try:
+    status, body = sniGet(url, self.timeout, self.agent, headers)
+   except Exception, e:
+    if attempt == 1:
+     time.sleep(1)
+     continue
+    log.warning("NOAA: libssl transport failed: %s" % e)
+    return None
+   if status != 200:
+    log.warning("NOAA: HTTP %s from %s" % (status, url))
+    return None
+   return SNIResponse(body, status)
+  return None
+ def openURL(self, url, params=None, encodeParameters=True, headers={}):
+  if params:
+   query = urllib.urlencode(params) if encodeParameters else params
+   url = "?".join([url, query])
+  if SSLBinding.get() is None:
+   self.lastKnownError = "Error: no SNI transport (libssl not found)"
+  else:
+   try:
+    response = self.__viaCtypes(url, headers)
+   except Exception:
+    response = None
+   if response is not None:
+    return response
+   self.lastKnownError = "Error: request failed"
+  log.error(self.lastKnownError)
+  return None
+ def isEnabledForLocation(self, timezone, lat, long):
+  if NOAA.parserEnabled and timezone:
+   return timezone.startswith("America") or timezone.startswith("US")
+  return False
+ def __stations(self, url, lat, lon):
+  d = self.openURL(url)
+  if d is None:
+   return
+  fs = json.loads(d.read()).get("features", [])
+  k = math.cos(math.radians(lat)) * 111.32
+  o = []
+  for f in fs:
+   p = f.get("properties", {})
+   c = f.get("geometry", {}).get("coordinates", [])
+   sid = p.get("stationIdentifier")
+   if not sid or len(c) < 2:
+    continue
+   dx = (c[0] - lon) * k
+   dy = (c[1] - lat) * 110.57
+   e = (p.get("elevation") or {}).get("value") or 0
+   o.append(((dx * dx + dy * dy) ** 0.5, sid, e))
+  o.sort()
+  o = o[:40]
+  if not o:
+   return
+  sel = self.params.get("selectedStation")
+  if sel not in [x[1] for x in o]:
+   sel = o[0][1]
+   self.params["selectedStation"] = sel
+   log.info("NOAA: auto-selected %s" % sel)
+  lim = self.params.get("recommendedMiles") or 22
+  near = []
+  far = []
+  for km, sid, e in o:
+   mi = km * 0.621371
+   t = "%s | %.1f km / %.1f mi | %.0f m / %.0f ft" % (sid, km, mi, e, e * 3.28084)
+   if sid == sel:
+    t += "  (SELECTED - closest station)"
+   (near if mi <= lim else far).append(t)
+  if far:
+   near.append("-" * 40)
+   near.append("<details><summary style=\"color:#1e88e5;cursor:pointer\">Show %d more beyond %s mi</summary>%s</details>"
+    % (len(far), lim, "<br>".join(far)))
+  self.params["_stations"] = near
+  log.info("NOAA: %d st, %d near" % (len(o), len(o) - len(far)))
+ def perform(self):
+  s = self.settings
+  self.lastKnownError = ""
+  log.info("NOAA: v010")
+  pointsURL = "https://api.weather.gov/points/%.4f,%.4f" % (
+   s.location.latitude, s.location.longitude)
+  d = self.openURL(pointsURL)
+  if d is None:
+   self.lastKnownError = "Error: no grid point"
+   log.error(self.lastKnownError)
+   return
+  try:
+   points = json.loads(d.read())
+   props = points.get("properties", {})
+   hourlyURL = props.get("forecastHourly")
+   dailyURL  = props.get("forecast")
+   gridURL   = props.get("forecastGridData")
+   stURL     = props.get("observationStations")
+  except Exception, e:
+   self.lastKnownError = "Error: bad grid point"
+   log.error(self.lastKnownError)
+   log.exception(e)
+   return
+  if not (hourlyURL and gridURL):
+   self.lastKnownError = "Error: incomplete grid"
+   log.error(self.lastKnownError)
+   return
+  try:
+   if stURL: self.__stations(stURL, s.location.latitude, s.location.longitude)
+  except Exception, e:
+   log.warning("NOAA: st %s" % e)
+  hasHourly = self.getHourlyData(hourlyURL, gridURL)
+  hasDaily  = self.getDailyData(dailyURL) if dailyURL else False
+  if not hasHourly:
+   self.clearValues()
+  if self.parserDebug:
+   log.debug(self.result)
+ def getHourlyData(self, hourlyURL, gridURL):
+  d = self.openURL(hourlyURL)
+  if d is None:
+   log.warning("NOAA: cannot fetch hourly forecast.")
+   return False
+  try:
+   data = json.loads(d.read())
+   periods = data.get("properties", {}).get("periods", [])
+  except Exception, e:
+   log.warning("NOAA: cannot parse hourly forecast: %s" % e)
+   return False
+  grid = self.__fetchGridData(gridURL)
+  skyByHour = self.__gridSeries(grid, "skyCover", byHour=True)
+  qpfByHour = self.__gridSeries(grid, "quantitativePrecipitation", byHour=False)
+  todayTimestamp = cT()
+  maxDayTimestamp = todayTimestamp + gS.parserDataSizeInDays * 86400
+  maxDayRH = {}
+  minDayRH = {}
+  for p in periods:
+   ts = fT(p.get("startTime"))
+   if ts is None or ts >= maxDayTimestamp:
+    continue
+   temp = self.__toFloat(p.get("temperature"))
+   if temp is not None and p.get("temperatureUnit") == "F":
+    temp = (temp - 32) * 5.0 / 9.0
+   dew = self.__value(p.get("dewpoint"))
+   if dew is not None and str(p.get("dewpoint", {}).get("unitCode", "")).endswith("degF"):
+    dew = (dew - 32) * 5.0 / 9.0
+   rh   = self.__value(p.get("relativeHumidity"))
+   pop  = self.__value(p.get("probabilityOfPrecipitation"))
+   wind = self.__parseWind(p.get("windSpeed"))
+   sky  = skyByHour.get(ts)
+   if rh is not None:
+    day = gD(ts)
+    if day not in minDayRH or rh < minDayRH[day]:
+     minDayRH[day] = rh
+    if day not in maxDayRH or rh > maxDayRH[day]:
+     maxDayRH[day] = rh
+   if temp  is not None: self.addValue(dt.TEMPERATURE, ts, temp, False)
+   if rh    is not None: self.addValue(dt.RH,          ts, rh,   False)
+   if dew   is not None: self.addValue(dt.DEWPOINT,    ts, dew,  False)
+   if wind  is not None: self.addValue(dt.WIND,        ts, wind, False)
+   if pop   is not None: self.addValue(dt.POP,         ts, pop,  False)
+   if sky   is not None: self.addValue(dt.SKYCOVER,    ts, sky / 100.0, False)
+  for ts, qpf in qpfByHour.items():
+   if ts < maxDayTimestamp:
+    self.addValue(dt.QPF, ts, qpf, False)
+  for day, value in minDayRH.items():
+   self.addValue(dt.MINRH, day, value, False)
+  for day, value in maxDayRH.items():
+   self.addValue(dt.MAXRH, day, value, False)
+  if self.parserDebug:
+   with open("noaa-hourly-%s.json" % rmTimestampToDateAsString(todayTimestamp), "w") as f:
+    json.dump(data, f, indent=2)
+  return True
+ def getDailyData(self, dailyURL):
+  if not dailyURL:
+   return False
+  d = self.openURL(dailyURL)
+  if d is None:
+   log.warning("NOAA: cannot fetch daily forecast.")
+   return False
+  try:
+   data = json.loads(d.read())
+   periods = data.get("properties", {}).get("periods", [])
+  except Exception, e:
+   log.warning("NOAA: cannot parse daily forecast: %s" % e)
+   return False
+  todayTimestamp = cT()
+  maxDayTimestamp = todayTimestamp + gS.parserDataSizeInDays * 86400
+  for p in periods:
+   ts = fT(p.get("startTime"))
+   if ts is None or ts >= maxDayTimestamp:
+    continue
+   temp = self.__toFloat(p.get("temperature"))
+   if temp is not None and p.get("temperatureUnit") == "F":
+    temp = (temp - 32) * 5.0 / 9.0
+   if p.get("isDaytime"):
+    self.addValue(dt.MAXTEMP, ts, temp, False)
+   else:
+    self.addValue(dt.MINTEMP, ts, temp, False)
+   icon = p.get("icon") or ""
+   slug = icon.split("?")[0].rsplit("/", 1)[-1].split(",", 1)[0]
+   if slug:
+    self.addValue(dt.CONDITION, ts, self.conditionConvert(slug), False)
+  if self.parserDebug:
+   with open("noaa-daily-%s.json" % rmTimestampToDateAsString(todayTimestamp), "w") as f:
+    json.dump(data, f, indent=2)
+  return True
+ def __fetchGridData(self, gridURL):
+  d = self.openURL(gridURL)
+  if d is None:
+   return None
+  try:
+   return json.loads(d.read()).get("properties", {})
+  except Exception, e:
+   log.warning("NOAA: cannot parse grid data: %s" % e)
+   return None
+ def __gridSeries(self, grid, key, byHour=True):
+  result = {}
+  if not grid:
+   return result
+  series = grid.get(key)
+  if not series:
+   return result
+  for item in series.get("values", []) or []:
+   validTime = item.get("validTime") or ""
+   base = validTime.split("/")[0]
+   ts = fT(base)
+   if ts is None:
+    continue
+   if byHour:
+    ts = ts - (ts % 3600)
+   if item.get("value") is not None:
+    result[ts] = self.__toFloat(item["value"])
+  return result
+ def __value(self, f):
+  return self.__toFloat(f.get("value")) if isinstance(f,dict) else None
+ def __parseWind(self, s):
+  if not s: return None
+  p=s.split()
+  try: v=float(p[0])
+  except: return None
+  u=p[1].lower() if len(p)>1 else "mph"
+  return v*0.44704 if u.startswith("mph") else v/3.6 if u.startswith("km") else v*0.514444 if u.startswith("kt") else None
+ def __toFloat(self, v):
+  try: return None if v is None else float(v)
+  except: return None
+ _C="bkn.MostlyCloudy|skc.Fair|few.FewClouds|sct.PartlyCloudy|ovc.Overcast|fg.Fog|smoke.Smoke|fzra.HeavyFreezingRain|ip.IcePellets|mix.FreezingRain|raip.RainIce|sleet.RainIce|hail.RainIce|rasn.RainSnow|shra.RainShowers|tsra.Thunderstorm|sn.Snow|showers.RainShowers|wind.Windy|shwrs.ShowersInVicinity|fzrara.HeavyFreezingRain|hi_tsra.ThunderstormInVicinity|ra1.LightRain|ra.HeavyRain|nsvrtsra.FunnelCloud|dust.Dust|mist.Haze|haze.Haze|hot.Hot|cold.Cold"
+ def conditionConvert(self, s):
+  for p in self._C.split("|"):
+   k,v=p.split(".")
+   if k in s: return getattr(ct,v)
+  return ct.Unknown
+if __name__=="__main__":
+ import os
+ class L: latitude=float(os.environ.get("RM_LAT","37.6"));longitude=float(os.environ.get("RM_LON","-121.8"));elevation=float(os.environ.get("RM_ELEVATION","80.0"))
+ class S: location=L()
+ p=NOAA();p.settings=S();p.perform();print len(p.result),p.lastKnownError
